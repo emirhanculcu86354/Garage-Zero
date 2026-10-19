@@ -44,8 +44,8 @@ function addRep(n) { S.rep = Math.max(0, Math.min(100, S.rep + n)); }
 function pay(n) { if (S.cash < n) { UI.toast(`Yeterli paran yok (${fmt(n)} gerekli).`, 'bad'); return false; } return true; }
 
 // ---------- araç üretimi ----------
-function genCar(L, nFaults) {
-  const models = Object.keys(MODELS).filter(k => MODELS[k].lvl <= Math.max(1, L));
+function genCar(L, nFaults, truck) {
+  const models = Object.keys(MODELS).filter(k => MODELS[k].lvl <= Math.max(1, L) && !!MODELS[k].truck === !!truck);
   const age = ri(2, 17);
   const c = {
     id: uid(), model: pick(models), color: pick(CAR_COLORS), year: YEAR - age, km: round1k(age * ri(9000, 24000)),
@@ -63,8 +63,9 @@ function symptomsOf(c) {
   c.faults.forEach(f => { const l = shuffle(FAULTS[f].sym.slice()); s.add(l[0]); if (l[1] && Math.random() < 0.55) s.add(l[1]); });
   return [...s];
 }
-function genJob() {
+function genJob(truck) {
   const L = lvl(); let c;
+  if (truck) { c = genCar(Math.max(2, L), Math.random() < 0.5 ? 1 : 2, true); c.truck = true; c.owner = 'customer'; c.mods = []; c.modReq = []; c.sym = symptomsOf(c); c.clean = Math.random() < 0.3; c.cust = { name: pick(['Mehmet Şoför', 'Kaya Nakliyat', 'Demir Lojistik', 'Ali Kaptan', 'Güney Taşımacılık']), deadline: S.day + ri(0, 1) }; return c; }
   const r = Math.random();
   if (r < 0.2) { c = genCar(L, 0); c.faults = ['maintenance']; if (Math.random() < 0.3) { const x = genCar(L, 1); if (x.faults[0] && FAULTS[x.faults[0]].comp !== 'oilcap') c.faults.push(x.faults[0]); } }
   else if (r < 0.3) { c = genCar(L, 0); c.faults = ['tires']; }
@@ -104,7 +105,7 @@ function genWorker(role, maxSkill) {
   return { id: 'w' + (S.idc++), name: pick(STAFF_NAMES), role, skill, spec, wage: wageFor(role, skill), xp: 0, jobs: 0, bay: null, queue: [], errand: null, energy: 100, morale: 70, todayJobs: 0 };
 }
 function refreshCandidates() {
-  const top = Math.min(5, 2 + Math.floor(lvl() / 2) + Math.floor(S.rep / 40));
+  const top = Math.min(5, 2 + Math.floor(lvl() / 2) + Math.floor(S.rep / 40) + ((S.tier || 0) >= 3 ? 1 : 0));
   S.cands = [genWorker('usta', top), genWorker('usta', Math.max(1, top - 1)), genWorker('cirak', 3)];
 }
 
@@ -154,6 +155,9 @@ function scheduleDay(first) {
     for (let i = 0; i < callN; i++) S.events.push({ at: first && i === 0 ? 20 : ri(5, 470), type: 'call' });
     S.appts.filter(a => a.day === S.day).forEach(a => S.events.push({ at: a.at, type: 'appt', id: a.id }));
     if (S.dayEvent === 'fleet') S.events.push({ at: ri(20, 200), type: 'cust' });
+    if ((S.tier || 0) >= 1) S.events.push({ at: ri(30, 400), type: 'cust' });
+    if (S.truckHall) for (let i = 0; i < ri(1, 2 + ((S.tier || 0) >= 3 ? 1 : 0)); i++) S.events.push({ at: ri(30, 420), type: 'truck' });
+    (S.contracts || []).forEach(k => { if (Math.random() < k.perDay) S.events.push({ at: ri(20, 400), type: 'contract', id: k.id }); });
     (S.warranty || []).filter(w => w.day === S.day).forEach(w => S.events.push({ at: ri(15, 300), type: 'warranty', id: w.id }));
   }
   S.cars.filter(c => c.listed).forEach(c => scheduleBuyers(c));
@@ -184,7 +188,7 @@ function gameTick(dt) {
 
 function freeApron() { const used = new Set(S.jobs.filter(j => j.apron != null).map(j => j.apron)); return [0, 1, 2, 3].find(i => !used.has(i)); }
 function arrive(j, patience) {
-  const slot = freeApron(); if (slot == null) return false;
+  const slot = j.truck ? (S.jobs.some(x => x.apron === 10) ? null : 10) : freeApron(); if (slot == null) return false;
   j.apron = slot; j.leaveAt = S.minute + patience * (S.up.lounge ? 1.5 : 1) * cfg('patience');
   S.jobs.push(j); syncScene(); UI.render();
   return true;
@@ -212,6 +216,17 @@ function fireEvent(e) {
     S.appts = S.appts.filter(x => x !== a);
     UI.toast(`Randevulu müşteri geldi: ${a.job.cust.name}`, 'ok');
     log(`${a.job.cust.name} randevusuna zamanında geldi.`);
+  }
+  if (e.type === 'truck' || e.type === 'contract') {
+    const K = e.type === 'contract' ? (S.contracts || []).find(k => k.id === e.id) : null;
+    if (e.type === 'contract' && !K) return;
+    const truck = e.type === 'truck' || (K && K.truck);
+    if (truck && !S.truckHall) return;
+    const j = genJob(truck);
+    if (K) { j.contract = K.id; j.cust.name = K.company; j.cust.deadline = S.day + 1; j.regular = false; }
+    if (!arrive(j, ri(180, 260))) { if (e.at + 30 < dayMinutes() - 60) addEvent(Object.assign(e, { at: e.at + 30 })); return; }
+    UI.toast(truck ? `Tır geldi: ${j.cust.name} — ${MODELS[j.model].name}` : `Sözleşmeli araç geldi: ${j.cust.name}`, 'info'); SFX.horn();
+    log(`${j.cust.name} ${MODELS[j.model].name} ile geldi${K ? ' (sözleşme)' : ''}.`);
   }
   if (e.type === 'warranty') {
     const w = (S.warranty || []).find(x => x.id === e.id); if (!w) return;
@@ -273,7 +288,7 @@ function cancelTask(wid, tid) {
   const w = staffById(wid); if (!w) return;
   const i = w.queue.findIndex(t => t.id === tid); if (i < 0) return;
   const t = w.queue[i];
-  if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1;
+  if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + (t.qty || 1);
   w.queue.splice(i, 1);
   if (i === 0) { const n = WNPC[w.id]; if (n) { n.root.visible = true; } workerGoHome(w); }
   UI.render(); if (UI.inspect) UI.renderInspect();
@@ -293,7 +308,7 @@ function processWorker(w, dm) {
   if (!t._rt.started) {
     if (!carParked(c.id) || !n) return;
     const view = t.comp ? COMPS[t.comp].view : t.part ? COMPS[FAULTS[t.part].comp].view : (t.type === 'overview' ? 'hood' : null);
-    if (view === 'under') { if (c.bay == null) { UI.toast('Alt takım işi için araç liftte olmalı.', 'bad'); w.queue.shift(); return; } c.lifted = true; }
+    if (view === 'under') { if (c.bay == null) { UI.toast('Alt takım işi için araç liftte olmalı.', 'bad'); w.queue.shift(); return; } if (!c.truck) c.lifted = true; }
     if (view === 'hood') c.hoodOpen = true;
     if (t.type === 'gtest' && t.test === 'drive') { c.lifted = false; c.hoodOpen = false; }
     syncScene();
@@ -385,8 +400,9 @@ function replacePart(id, f) {
   const c = carById(id);
   if (c.bay == null) return UI.toast('Parça değişimi için araç liftte olmalı.', 'bad');
   if (c.fixed.includes(f) || c.wasted.includes(f) || tasksFor(id).some(x => x.t.part === f)) return UI.toast('Bu parça zaten yenilendi ya da sırada.', 'bad');
-  if (!(S.stock[f] > 0)) return UI.partMissing(f);
-  if (enqueue(c, { type: 'part', part: f, min: laborTime(f) })) S.stock[f]--;
+  const need = c.truck ? TRUCK_STOCK : 1;
+  if (!((S.stock[f] || 0) >= need)) { if (c.truck) UI.toast(`Tır için ${need} adet ${FAULTS[f].part} gerekir.`, 'bad'); return UI.partMissing(f); }
+  if (enqueue(c, { type: 'part', part: f, min: Math.round(laborTime(f) * (c.truck ? TRUCK_LABOR_MUL : 1)), qty: need })) S.stock[f] -= need;
 }
 function cleanCar(id) {
   const c = carById(id); if (c.clean) return;
@@ -415,7 +431,7 @@ function hire(id) {
 }
 function fire(id) {
   const w = staffById(id); if (!w) return;
-  w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1; });
+  w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + (t.qty || 1); });
   if (w.errand) return UI.toast('Parça almaya gitti; dönünce çıkarabilirsin.', 'bad');
   S.staff = S.staff.filter(x => x !== w);
   addMoney(-w.wage, `${wname(w)} — tazminat`);
@@ -578,13 +594,13 @@ function haggleEnd() {
 // ---------- iş kabul ----------
 function acceptJob(id) {
   const j = jobById(id); if (!j) return;
-  const b = freeBay(); if (b < 0) return UI.toast('Boş lift yok. Bir aracı teslim et ya da lift al.', 'bad');
+  const b = j.truck ? freeTruckBay() : freeBay(); if (b < 0) return UI.toast(j.truck ? 'Tır servisinde boş kanal yok.' : 'Boş lift yok. Bir aracı teslim et ya da lift al.', 'bad');
   S.jobs = S.jobs.filter(x => x !== j);
   j.waitedLong = j.leaveAt && j.leaveAt - S.minute < 40;
   j.apron = null; j.bay = b; j.accepted = S.day; j.leaveAt = null; S.cars.push(j);
   if (j.appt) addRep(1);
-  log(`${j.cust.name} — ${MODELS[j.model].name} Lift ${b + 1}’e alındı.`);
-  if (!S.staff.some(w => w.role === 'usta' && w.bay === b)) UI.toast(`Lift ${b + 1}’de usta yok — Personel’den ata.`, 'bad');
+  log(`${j.cust.name} — ${MODELS[j.model].name} ${bayName(b)}’e alındı.`);
+  if (!S.staff.some(w => w.role === 'usta' && w.bay === b)) UI.toast(`${bayName(b)}’de usta yok — Personel’den ata.`, 'bad');
   Life.toBench(j.id);
   UI.selected = j.id; syncScene(); UI.openCar(j.id, 'info'); save();
 }
@@ -597,6 +613,9 @@ function jobLeaves(j, why, rep) {
   syncScene(); UI.render();
 }
 function freeBay() { for (let i = 0; i < S.bays; i++) if (!S.cars.some(c => c.bay === i)) return i; return -1; }
+function freeTruckBay() { if (!S.truckHall) return -1; for (let i = 4; i < 6; i++) if (!S.cars.some(c => c.bay === i)) return i; return -1; }
+function bayName(b) { return b >= 4 ? `Tır kanalı ${b - 3}` : `Lift ${b + 1}`; }
+function allBays() { const a = [...Array(S.bays).keys()]; if (S.truckHall) a.push(4, 5); return a; }
 function freeLot() { for (let i = 0; i < S.lot; i++) if (!S.cars.some(c => c.lot === i)) return i; return -1; }
 function moveToBay(id) {
   const c = carById(id), b = freeBay();
@@ -623,6 +642,7 @@ function globalResult(c, t) {
 }
 function ustaSpot(c, view) {
   const m = G.carMeshes[c.id], I = m.userData.info;
+  if (view === 'under' && I.truck) { const p = m.localToWorld(new THREE.Vector3(I.W / 2 + 0.7, 0, 0.8)); return { pos: [p.x, p.z], look: [m.position.x, m.position.z], pose: 'inspect' }; }
   if (view === 'under') { const p = m.localToWorld(new THREE.Vector3(0.35, 0, 0.6)); return { pos: [p.x, p.z], look: [m.position.x, m.position.z + 1], pose: 'workUp' }; }
   if (view === 'door') { const p = m.localToWorld(new THREE.Vector3(-(I.W / 2 + 0.45), 0, 0.25)); return { pos: [p.x, p.z], look: [m.position.x, m.position.z], pose: 'work' }; }
   const p = m.localToWorld(new THREE.Vector3(0, 0, I.L / 2 + 0.5)), e = m.localToWorld(new THREE.Vector3(0, 0, I.f0 + I.hoodLen / 2));
@@ -633,8 +653,8 @@ function deliver(id) {
   const c = carById(id); if (!c || c.owner !== 'customer') return;
   if (tasksFor(id).length) return UI.toast('Araç üzerinde süren iş var. Bitmesini bekle ya da iptal et.', 'bad');
   const correct = c.fixed, remaining = c.faults, wasted = c.wasted;
-  const parts = correct.reduce((s, f) => s + partPrice(f), 0) * (S.partMarkup || PART_MARKUP);
-  const labor = correct.reduce((s, f) => s + FAULTS[f].labor, 0) / 60 * S.laborRate;
+  const parts = correct.reduce((s, f) => s + partPrice(f), 0) * (S.partMarkup || PART_MARKUP) * (c.truck ? TRUCK_PART_MUL : 1);
+  const labor = correct.reduce((s, f) => s + FAULTS[f].labor, 0) / 60 * S.laborRate * (c.truck ? TRUCK_LABOR_MUL : 1);
   const tested = Object.keys(c.findings).length;
   const modsDone = (c.modReq || []).filter(k => (c.mods || []).includes(k)), modsMissing = (c.modReq || []).filter(k => !(c.mods || []).includes(k));
   const modBill = modsDone.reduce((s, k) => s + MODS[k].cost * MOD_MARKUP + MODS[k].labor / 60 * S.laborRate, 0);
@@ -642,6 +662,7 @@ function deliver(id) {
   if (modsDone.length) lines.push(`Modifiye: ${modsDone.map(k => MODS[k].name).join(', ')} — ${fmt(modBill)}`);
   if (modsMissing.length) { lines.push(`Yapılmayan istek: ${modsMissing.map(k => MODS[k].name).join(', ')}`); repD -= 2 * modsMissing.length; }
   if (c.fleet) { payN = Math.round(payN * 1.5); lines.push('Filo müşterisi: fatura %50 fazla ödendi.'); }
+  if (c.contract) { const K = (S.contracts || []).find(k => k.id === c.contract); if (K) { payN = Math.round(payN * K.payMul); K.done++; lines.push(`${K.company} sözleşmesi: fatura ×${K.payMul.toFixed(2).replace('.', ',')}`); if (remaining.length) { K.strikes++; lines.push('Sözleşme ihlali: arıza çözülmedi.'); } } }
   if (c.regular) lines.push('Sadık müşterin tekrar seni tercih etti.');
   if (c.tow) lines.push(`Çekici ücreti faturaya eklendi: ${fmt(TOW_FEE)}`);
   if (c.warranty) { payN = 0; lines.push('Garanti işi — ücret alınmadı.'); }
@@ -798,6 +819,7 @@ function endDay() {
   const wages = Math.round(S.staff.filter(w => w.trainDay !== S.day).reduce((s, w) => s + w.wage, 0) * cfg('costs'));
   if (wages) addMoney(-wages, `Personel maaşları (${S.staff.length} kişi)`);
   S.jobs.slice().forEach(j => jobLeaves(j));
+  S.cars.filter(c => c.owner === 'customer' && c.cust.deadline <= S.day && c.contract).forEach(c => { const K = (S.contracts || []).find(k => k.id === c.contract); if (K) { K.strikes++; addMoney(-5000, `${K.company} sözleşme cezası`); ev.push(`${K.company}: araç zamanında teslim edilmedi, 5.000 ₺ ceza.`); } });
   S.cars.filter(c => c.owner === 'customer' && c.cust.deadline <= S.day).forEach(c => {
     addRep(-6); ev.push(`${c.cust.name} beklemekten sıkıldı ve aracını aldı (itibar −6).`); addReview(c.cust.name, 1, REVIEW_TXT[1][2]);
     S.staff.forEach(w => { w.queue = w.queue.filter(t => { if (t.car === c.id && t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1; return t.car !== c.id; }); });
@@ -824,7 +846,7 @@ function endDay() {
   S.staff.slice().forEach(w => {
     let d = (w.todayJobs ? 2 : -1) + (w.energy < 20 ? -6 : 0) + (w.wage >= wageFor(w.role, w.skill) * 1.1 ? 3 : w.wage < wageFor(w.role, w.skill) ? -4 : 0) + ri(-2, 2);
     w.morale = Math.max(0, Math.min(100, (w.morale == null ? 70 : w.morale) + d));
-    if (w.morale < 20 && !w.errand && Math.random() < 0.4) { S.staff = S.staff.filter(x => x !== w); ev.push(`${wname(w)} moralsizdi, işi bıraktı!`); w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1; }); }
+    if (w.morale < 20 && !w.errand && Math.random() < 0.4) { S.staff = S.staff.filter(x => x !== w); ev.push(`${wname(w)} moralsizdi, işi bıraktı!`); w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + (t.qty || 1); }); }
     else if (w.morale < 30) ev.push(`${wname(w)} mutsuz (moral ${Math.round(w.morale)}). Prim ya da zam düşünebilirsin.`);
     if (w.trainDay === S.day) { if (w.trainKind === 'skill') { w.skill = Math.min(5, w.skill + 1); w.wage = wageFor(w.role, w.skill); } else { w.spec = w.trainKind; } ev.push(`${wname(w)} eğitimi tamamladı: ${w.trainKind === 'skill' ? stars(w.skill) : SPECS[w.spec].name}.`); w.trainDay = null; w.trainKind = null; }
     w.energy = 100; w.todayJobs = 0; w.bonusDay = 0;
@@ -841,6 +863,7 @@ function endDay() {
   S.weather = S.forecast || 'sunny'; S.forecast = pick(WEATHER_ORDER);
   ev.push(`Bugün hava: ${WEATHER[S.weather].name}. Yarın: ${WEATHER[S.forecast].name}.`);
   rollDayEvent(ev);
+  companyDay(ev);
   if (S.lic.galeri && S.day % 4 === 0) { S.auction = { day: S.day, lots: [genListing(), genListing(), genListing()].map(c => (c.note = 'İhale aracı — ekspertiz yok, olduğu gibi satılır.', c.ask = round1k(carValue(c, true) * 0.55), c)), done: {} }; ev.push('Bugün oto ihalesi var! Galeri → İhale sekmesine bak.'); }
   refreshMarket(false); refreshCandidates(); genGoals(); scheduleDay(false); checkAch(); applyWeather();
   ev.forEach(e => log(e));
@@ -954,4 +977,89 @@ function bidAuction(id, bid) {
   log(`İhaleden ${MODELS[c.model].name} ${fmt(price)}’ye alındı (en yüksek rakip ${fmt(rival)}).`, 'ok'); SFX.cash();
   UI.toast(`İhaleyi kazandın: ${fmt(price)} (ikinci fiyat ihalesi).`, 'ok');
   syncScene(); UI.render(); save();
+}
+
+// ---------- v12: şirket ----------
+function tierReqs(i) {
+  const T = TIERS[i]; if (!T || !T.req) return [];
+  const r = T.req, out = [];
+  if (r.jobs) out.push({ t: `${r.jobs} başarılı tamir`, ok: S.stats.jobs >= r.jobs, v: S.stats.jobs });
+  if (r.rep) out.push({ t: `İtibar ${r.rep}`, ok: S.rep >= r.rep, v: S.rep });
+  if (r.rating) out.push({ t: `Puan ${r.rating.toFixed(1).replace('.', ',')}+`, ok: (rating() || 0) >= r.rating, v: (rating() || 0).toFixed(1) });
+  if (r.branches) out.push({ t: `${r.branches} şube`, ok: (S.branches || []).length >= r.branches, v: (S.branches || []).length });
+  if (r.cash) out.push({ t: `${fmt(r.cash)} yatırım`, ok: S.cash >= r.cash, v: fmt(S.cash) });
+  return out;
+}
+function upgradeTier() {
+  const n = (S.tier || 0) + 1, T = TIERS[n]; if (!T) return;
+  const reqs = tierReqs(n); if (!reqs.every(r => r.ok)) return UI.toast('Koşullar henüz tamam değil.', 'bad');
+  addMoney(-T.req.cash, `Şirket büyümesi: ${T.name}`, true);
+  S.tier = n; addRep(3); addXP(100);
+  log(`Şirket büyüdü: ${T.name}!`, 'ok'); SFX.cash(); setTimeout(() => SFX.ding(), 400);
+  UI.modal(`${T.name}`, `<div class="brand" style="gap:14px"><svg class="emb" viewBox="0 0 200 200" style="width:90px"><use href="#gzEmblem"/></svg><p class="big ok" style="font-size:30px">Yeni kademe!</p></div><ul class="plain">${T.perks.map(p => `<li>${p}</li>`).join('')}</ul>`, [{ t: 'Harika', cls: 'pri' }]);
+  if (n >= 1) genContractOffers();
+  syncScene(); UI.render(); save();
+}
+function buyTruckHall() {
+  if ((S.tier || 0) < 2) return UI.toast('Tır servisi için “Profesyonel Servis” kademesi gerekli.', 'bad');
+  if (S.truckHall || !pay(TRUCK_HALL_COST)) return;
+  addMoney(-TRUCK_HALL_COST, 'Tır servisi binası', true); S.truckHall = true;
+  log('Tır servisi açıldı! Personel’den tır kanallarına usta ata.', 'ok'); SFX.cash();
+  addEvent({ at: Math.min(dayMinutes() - 60, S.minute + 20), type: 'truck' });
+  syncScene(); UI.render(); save();
+}
+function buyBranch(di) {
+  const D = DISTRICTS[di], lim = BRANCH_LIMIT[S.tier || 0];
+  S.branches = S.branches || [];
+  if (S.branches.length >= lim) return UI.toast(lim ? `Bu kademede en fazla ${lim} şube.` : 'Şube için “Profesyonel Servis” kademesi gerekli.', 'bad');
+  if (S.branches.some(b => b.district === D.name)) return;
+  if (!pay(D.cost)) return;
+  const used = new Set(S.branches.map(b => b.bld)), free = CITY.shopFronts.map((_, i) => i).filter(i => !used.has(i));
+  addMoney(-D.cost, `Şube: ${D.name}`, true);
+  S.branches.push({ id: 'b' + (S.idc++), district: D.name, di, level: 1, mgr: ri(1, 3), bld: free.length ? pick(free) : -1, total: 0, last: 0, day: S.day });
+  log(`${D.name} şubesi açıldı.`, 'ok'); SFX.cash(); syncScene(); UI.render(); save();
+}
+function upgradeBranch(id) {
+  const b = (S.branches || []).find(x => x.id === id); if (!b || b.level >= 3) return;
+  const cost = BRANCH_UPGRADE[b.level]; if (!pay(cost)) return;
+  addMoney(-cost, `Şube büyütme: ${b.district}`, true); b.level++; UI.toast(`${b.district} şubesi seviye ${b.level} oldu.`, 'ok'); UI.render(); save();
+}
+function trainBranchMgr(id) {
+  const b = (S.branches || []).find(x => x.id === id); if (!b || b.mgr >= 5) return;
+  const cost = 40000 * b.mgr; if (!pay(cost)) return;
+  addMoney(-cost, `Şube müdürü eğitimi: ${b.district}`, true); b.mgr++; UI.render(); save();
+}
+function sellBranch(id) {
+  const b = (S.branches || []).find(x => x.id === id); if (!b) return;
+  const D = DISTRICTS[b.di], val = Math.round(D.cost * 0.7 + BRANCH_UPGRADE.slice(1, b.level).reduce((a, c) => a + c, 0) * 0.6);
+  S.branches = S.branches.filter(x => x !== b); addMoney(val, `Şube satıldı: ${b.district}`, true);
+  log(`${b.district} şubesi ${fmt(val)}’ye satıldı.`); syncScene(); UI.render(); save();
+}
+function genContractOffers() {
+  S.contractOffers = [];
+  const pool = CONTRACT_COMPANIES.filter(c => !c.truck || ((S.tier || 0) >= 3 && S.truckHall)).filter(c => !(S.contracts || []).some(k => k.company === c.name));
+  shuffle(pool).slice(0, 2).forEach(c => S.contractOffers.push({ id: 'k' + (S.idc++), company: c.name, truck: c.truck, perDay: +rnd(0.45, 0.9).toFixed(2), payMul: +rnd(1.2, 1.5).toFixed(2), days: ri(8, 15) }));
+}
+function acceptContract(id) {
+  const o = (S.contractOffers || []).find(x => x.id === id); if (!o) return;
+  if (o.truck && !S.truckHall) return UI.toast('Bu sözleşme için tır servisi gerekli.', 'bad');
+  S.contractOffers = S.contractOffers.filter(x => x !== o);
+  S.contracts = S.contracts || [];
+  S.contracts.push(Object.assign({}, o, { until: S.day + o.days, strikes: 0, done: 0 }));
+  log(`${o.company} ile ${o.days} günlük sözleşme imzalandı.`, 'ok'); SFX.ding(); UI.render(); save();
+}
+function companyDay(ev) {
+  (S.branches || []).forEach(b => {
+    const D = DISTRICTS[b.di];
+    let p = D.base * [1, 1, 1.35, 1.75][b.level] * rnd(0.55, 1.35) * (0.85 + b.mgr * 0.06) * (0.9 + S.rep / 500) * ((S.tier || 0) >= 4 ? 1.2 : 1);
+    if (Math.random() < 0.08) p = -D.base * rnd(0.2, 0.5);
+    p = Math.round(p / 100) * 100; b.last = p; b.total += p;
+    addMoney(p, `Şube ${b.district}`, false);
+  });
+  if ((S.branches || []).length) ev.push(`Şubelerden net: ${fmt(S.branches.reduce((s, b) => s + b.last, 0))}.`);
+  (S.contracts || []).slice().forEach(k => {
+    if (k.strikes >= 3) { S.contracts = S.contracts.filter(x => x !== k); addRep(-5); ev.push(`${k.company} sözleşmeyi feshetti (3 ihlal).`); }
+    else if (S.day >= k.until) { S.contracts = S.contracts.filter(x => x !== k); if (!k.strikes) { const bon = 15000 + k.done * 3000; addMoney(bon, `${k.company} sözleşme primi`); addRep(3); ev.push(`${k.company} sözleşmesi kusursuz bitti: ${fmt(bon)} prim.`); } else ev.push(`${k.company} sözleşmesi sona erdi.`); }
+  });
+  if ((S.tier || 0) >= 1 && (S.day % 5 === 0 || !(S.contractOffers || []).length)) genContractOffers();
 }

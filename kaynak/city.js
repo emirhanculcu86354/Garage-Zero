@@ -22,7 +22,7 @@ function shopSignTexture(text, bg, fg) {
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
 }
 
-const CITY = { lamps: [], lampLights: [], windowsMats: [], traffic: [] };
+const CITY = { lamps: [], lampLights: [], windowsMats: [], traffic: [], shopFronts: [] };
 
 function buildCity() {
   const s = G.scene;
@@ -49,7 +49,8 @@ function buildCity() {
   let x = -64, si = 0;
   while (x < 64) {
     const w = rnd(7, 11), h = rnd(3.6, 4.6), d = rnd(7, 10);
-    addBuilding(x + w / 2, 21.5 + d / 2, w, h, d, pick(palettes), shops[si++ % shops.length], 0);
+    const bg = addBuilding(x + w / 2, 21.5 + d / 2, w, h, d, pick(palettes), shops[si++ % shops.length], 0);
+    if (Math.abs(x + w / 2) < 45) CITY.shopFronts.push(bg);
     x += w + rnd(0.3, 1.2);
   }
   // arka sıra (dükkân arkası)
@@ -61,8 +62,8 @@ function buildCity() {
     x += w + rnd(0.5, 1.5);
   }
   for (let i = 0; i < 5; i++) addBuilding(-15 + i * 12, -24, 11, rnd(14, 26), 10, pick(palettes), null, Math.PI);
-  addBuilding(-40, -6.5, 10, 12, 14, '#b9a089', null, Math.PI / 2);
-  addBuilding(-44, 5.5, 10, 4.2, 8, '#a8b4b8', ['OTO YIKAMA', '#2c5a99', '#fff'], Math.PI / 2);
+  CITY.sideBld = addBuilding(-40, -6.5, 10, 12, 14, '#b9a089', null, Math.PI / 2);
+  CITY.washBld = addBuilding(-44, 5.5, 10, 4.2, 8, '#a8b4b8', ['OTO YIKAMA', '#2c5a99', '#fff'], Math.PI / 2);
   addBuilding(48, 2, 10, 10, 16, '#d8cfc0', ['SİGORTA', '#23272c', '#fff'], -Math.PI / 2);
 
   // ağaçlar & lambalar
@@ -106,7 +107,7 @@ function buildCity() {
   const wsign = box(4.4, 1, 0.1, new THREE.MeshBasicMaterial({ map: shopSignTexture('MÜŞTERİ PARKI', '#2c5a99', '#fff') })); wsign.position.set(-21.5, 2.5, 9.8); s.add(wsign);
   [-23.4, -19.6].forEach(px => { const p = cyl(0.06, 0.06, 2.4, 6, poleM); p.position.set(px, 1.2, 9.8); s.add(p); });
   [[-24.5, -3.6], [-18.5, -3.6]].forEach(([x, z], i) => {
-    const fake = { id: 'p' + i, model: pick(Object.keys(MODELS)), color: pick(CAR_COLORS), paint: 80, clean: true };
+    const fake = { id: 'p' + i, model: pick(Object.keys(MODELS).filter(k => !MODELS[k].truck)), color: pick(CAR_COLORS), paint: 80, clean: true };
     const m = buildCar(fake); m.position.set(x, 0, z); m.rotation.y = Math.PI / 2; s.add(m);
   });
   // trafik
@@ -136,7 +137,9 @@ function addBuilding(x, z, w, h, d, color, sign, rot) {
     const awn = box(w * 0.85, 0.08, 1.4, cmat(new THREE.Color(sign[1]).getHex())); awn.position.set(0, 2.6, -d / 2 - 0.7); awn.rotation.x = -0.25; g.add(awn);
     const win = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.7, 1.8), new THREE.MeshStandardMaterial({ color: 0x9fbfd0, metalness: 0.5, roughness: 0.1, emissive: 0xffd98a, emissiveIntensity: 0 }));
     win.position.set(0, 1.2, -d / 2 - 0.02); win.rotation.y = Math.PI; g.add(win); CITY.windowsMats.push(win.material);
+    g.userData.sign = st; g.userData.awn = awn; g.userData.signDef = sign; g.userData.w = w;
   }
+  return g;
 }
 
 function updateTraffic(dt) {

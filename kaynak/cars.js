@@ -31,6 +31,7 @@ function plateTexture() {
 }
 
 function buildCar(car) {
+  if (MODELS[car.model] && MODELS[car.model].truck) return buildTruck(car);
   const style = (S && S.settings && S.settings.carStyle) || 'modern';
   return style === 'classic' ? buildCarClassic(car) : buildCarModern(car);
 }
@@ -271,4 +272,60 @@ function addScratches(g, W, L, yb, H) {
   }
   const dent = new THREE.Mesh(new THREE.CircleGeometry(0.22, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false }));
   dent.position.set(-(W / 2 + 0.072), yb + H * 0.55, L / 2 - 0.6); dent.rotation.y = -Math.PI / 2; dent.scale.set(1, 0.6, 1); g.add(dent);
+}
+
+// ---------- tır çekici ----------
+function buildTruck(car) {
+  const g = new THREE.Group();
+  const L = 7.2, W = 2.4, r = 0.52, yb = 0.78, yT = 1.25, f0 = 1.6, hoodLen = 2.0, wz = L / 2 - 1.15;
+  const paint = umat(car.color, { metalness: 0.4, roughness: 0.45 - (car.paint / 100) * 0.2 });
+  const dark = cmat(0x1a1d21, { roughness: 0.8 }), steel = cmat(0x8c939b, { metalness: 0.8, roughness: 0.3 }), chrome = cmat(0xd5d9de, { metalness: 0.9, roughness: 0.2 });
+  const glass = (car.mods || []).includes('tint') ? cmat(0x07090c, { metalness: 0.8, roughness: 0.05 }) : cmat(0x1c2836, { metalness: 0.7, roughness: 0.08 });
+  // şasi
+  [-1, 1].forEach(sx => { const rail = box(0.18, 0.28, L - 0.4, dark); rail.position.set(sx * 0.45, yb + 0.1, -0.1); g.add(rail); });
+  const cross = box(1.1, 0.12, 0.2, dark); cross.position.set(0, yb + 0.1, -2.6); g.add(cross);
+  const fifth = cyl(0.7, 0.7, 0.1, 18, cmat(0x2b2f34, { metalness: 0.6 })); fifth.position.set(0, yb + 0.35, -2.1); g.add(fifth);
+  const deck = box(2.0, 0.08, 2.6, cmat(0x3b4148, { metalness: 0.5 })); deck.position.set(0, yb + 0.28, -2.3); g.add(deck);
+  // yakıt depoları, akü kutusu
+  [-1, 1].forEach(sx => { const t = cyl(0.32, 0.32, 1.3, 16, chrome); t.rotation.x = Math.PI / 2; t.position.set(sx * (W / 2 - 0.3), yb + 0.05, -0.4); g.add(t); });
+  // kabin (öne devrilir)
+  const cabPivot = new THREE.Group(); cabPivot.position.set(0, yT, L / 2 - 0.05); g.add(cabPivot);
+  const cab = new THREE.Group(); cabPivot.add(cab);
+  const cabL = 2.5, cabH = 2.45;
+  const shell = box(W, cabH, cabL, paint); shell.position.set(0, cabH / 2, -cabL / 2); cab.add(shell);
+  const roofB = box(W * 0.95, 0.45, cabL * 0.85, paint); roofB.position.set(0, cabH + 0.2, -cabL / 2 - 0.15); cab.add(roofB);
+  const ws = box(W * 0.86, 0.95, 0.06, glass); ws.position.set(0, cabH * 0.66, 0.01); cab.add(ws);
+  [-1, 1].forEach(sx => {
+    const sw = box(0.06, 0.75, 0.9, glass); sw.position.set(sx * (W / 2 + 0.005), cabH * 0.66, -0.6); cab.add(sw);
+    const mir = box(0.08, 0.5, 0.18, dark); mir.position.set(sx * (W / 2 + 0.25), cabH * 0.62, -0.1); cab.add(mir);
+    const arm = box(0.25, 0.05, 0.05, dark); arm.position.set(sx * (W / 2 + 0.12), cabH * 0.8, -0.1); cab.add(arm);
+    const step = box(0.5, 0.06, 0.35, steel); step.position.set(sx * (W / 2 - 0.2), -0.25, -0.9); cab.add(step);
+    const stack = cyl(0.09, 0.09, 2.6, 10, chrome); stack.position.set(sx * (W / 2 - 0.15), 1.0, -cabL - 0.15); cab.add(stack);
+  });
+  const grille = box(W * 0.6, 0.9, 0.06, cmat(0x2b2f34, { metalness: 0.6 })); grille.position.set(0, 0.55, 0.02); cab.add(grille);
+  for (let i = 0; i < 5; i++) { const b = box(W * 0.58, 0.04, 0.07, chrome); b.position.set(0, 0.2 + i * 0.17, 0.04); cab.add(b); }
+  const fb = box(W + 0.05, 0.4, 0.3, umat(0x1a1d21)); fb.position.set(0, -0.15, 0.05); cab.add(fb);
+  const hl = new THREE.MeshStandardMaterial({ color: 0xfff6d8, emissive: 0xfff0c0, emissiveIntensity: (car.mods || []).includes('led') ? 1.2 : 0.5 });
+  [-1, 1].forEach(sx => { const h = box(0.4, 0.18, 0.06, hl); h.position.set(sx * (W / 2 - 0.35), 0.0, 0.2); cab.add(h); });
+  const beacon = box(1.0, 0.1, 0.2, new THREE.MeshStandardMaterial({ color: 0xffb020, emissive: 0xff8a00, emissiveIntensity: 0.6 })); beacon.position.set(0, cabH + 0.48, -0.4); cab.add(beacon);
+  // ticari plaka şeridi
+  const strip = box(W + 0.01, 0.12, cabL * 0.9, umat(0xe6e2d8)); strip.position.set(0, cabH * 0.3, -cabL / 2); cab.add(strip);
+  // tekerler: ön aks + arka tandem
+  const tireM = umat(0x131313, { roughness: 0.92, metalness: 0 }), hubM = cmat(0xb9bec4, { metalness: 0.8, roughness: 0.3 });
+  const wheels = [];
+  [[wz, 1], [-L / 2 + 1.0, 2], [-L / 2 + 2.15, 2]].forEach(([z, n]) => [-1, 1].forEach(sx => {
+    const w = new THREE.Group();
+    const t = cyl(r, r, n === 2 ? 0.55 : 0.32, 20, tireM); t.rotation.z = Math.PI / 2; w.add(t);
+    const hub = cyl(r * 0.55, r * 0.55, (n === 2 ? 0.56 : 0.33), 12, hubM); hub.rotation.z = Math.PI / 2; w.add(hub);
+    w.position.set(sx * (W / 2 - (n === 2 ? 0.32 : 0.2)), r, z); g.add(w); wheels.push(w);
+  }));
+  [-1, 1].forEach(sx => { const mud = box(0.6, 0.06, 2.4, dark); mud.position.set(sx * (W / 2 - 0.3), r * 2 + 0.08, -L / 2 + 1.55); g.add(mud); });
+  const info = { L, W, yb, yT, wz, f0, hoodLen, r, truck: true };
+  const comps = addEngineBay(g, info);
+  Object.assign(comps, addUnderbody(g, info));
+  comps.tires = wheels[0]; wheels.forEach(w => w.traverse(o => o.userData.comp = 'tires'));
+  comps.body = fb; fb.userData.comp = 'body';
+  if (!car.clean) { const dirt = new THREE.Mesh(new THREE.PlaneGeometry(cabL, 0.5), new THREE.MeshBasicMaterial({ color: 0x5c4a35, transparent: true, opacity: 0.45, depthWrite: false })); dirt.rotation.y = Math.PI / 2; dirt.position.set(W / 2 + 0.01, 0.35, -cabL / 2); cab.add(dirt); }
+  const ret = finishCar(g, Object.assign({}, car, { clean: true }), { hoodPivot: cabPivot, wheels, comps, h: yT + cabH + 0.6, info, hoodAng: 0.95 });
+  return ret;
 }

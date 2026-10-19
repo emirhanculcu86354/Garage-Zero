@@ -382,6 +382,12 @@ body.inspecting #camBtn{display:none}
 .brand{display:flex;align-items:center;gap:clamp(14px,3vw,28px)}
 .brand .emb{width:clamp(96px,20vw,170px);height:auto;flex:none;filter:drop-shadow(0 10px 24px rgba(0,0,0,.45))}
 
+.ladder{display:flex;flex-direction:column;gap:6px}
+.rung{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);opacity:.6}
+.rung .rn{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);font-family:var(--f-display);font-weight:900;flex:none}
+.rung.past{opacity:.85}.rung.past .rn{background:var(--ok);color:#0b1a12;border-color:var(--ok)}
+.rung.now{opacity:1;border-color:var(--accent)}.rung.now .rn{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (max-width:760px){.dbtn{font-size:10px}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
@@ -441,6 +447,7 @@ body.inspecting #camBtn{display:none}
   <button class="dbtn" data-act="panel" data-p="staff" id="dStaff"><svg viewBox="0 0 24 24"><path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7M22 21v-1a6 6 0 0 0-4-5.6"/></svg>Personel<span class="badge" id="bStaff" hidden></span></button>
   <button class="dbtn" data-act="panel" data-p="depot" id="dDepot"><svg viewBox="0 0 24 24"><path d="M3 8l9-5 9 5v12H3zM3 8l9 5 9-5M12 13v8"/></svg>Depo<span class="badge" id="bDepot" hidden></span></button>
   <button class="dbtn" data-act="panel" data-p="gallery" id="dGallery"><svg viewBox="0 0 24 24"><path d="M5 16l1.5-5h11L19 16M4 16h16v3H4zM7 19v2M17 19v2M8 13.5h0M16 13.5h0"/></svg>Galeri</button>
+  <button class="dbtn" data-act="panel" data-p="corp" id="dCorp"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5M9 11h.01M15 11h.01"/></svg>Şirket<span class="badge" id="bCorp" hidden></span></button>
   <button class="dbtn" data-act="panel" data-p="shop" id="dShop"><svg viewBox="0 0 24 24"><path d="M6 7h12l-1 13H7zM9 7a3 3 0 0 1 6 0"/></svg>Mağaza</button>
   <button class="dbtn" data-act="panel" data-p="biz" id="dBiz"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.3 6L12 16.4 6.6 19.4l1.3-6L3.4 9.3l6-.7z"/></svg>İşletme</button>
 </nav>
@@ -805,6 +812,30 @@ const DAY_EVENTS = {
   fleet:   { name: 'Filo müşterisi',      desc: 'Bir şirket filosundan araç gelecek; teslimde %50 fazla öder.', p: 0.08 },
   inspect: { name: 'Belediye denetimi',   desc: 'Denetim var: atölye temiz ve liftlerde iş düzenliyse ödül, değilse ceza.', p: 0.05 },
 };
+
+// ---------- v12: büyüyen şirket ----------
+MODELS.kartal = { name: 'Kartal 18.40 Çekici', type: 'truck', base: 3800000, lvl: 1, truck: true };
+MODELS.toros  = { name: 'Toros 26.48 Çekici',  type: 'truck', base: 5200000, lvl: 2, truck: true };
+const TRUCK_PART_MUL = 2.5, TRUCK_LABOR_MUL = 1.6, TRUCK_STOCK = 2;
+const TRUCK_HALL_COST = 650000;
+const TIERS = [
+  { name: 'Mahalle Tamirhanesi', perks: ['Başlangıç'] },
+  { name: 'Oto Servis', req: { jobs: 10, rep: 40, cash: 150000 }, perks: ['Çatıya ofis katı', 'Her gün +1 müşteri', 'Kurumsal sözleşme teklifleri'] },
+  { name: 'Profesyonel Servis', req: { jobs: 30, rep: 55, rating: 4.0, cash: 400000 }, perks: ['Tır Servisi binası açılabilir', 'İlk şubeni açabilirsin', 'Cam vitrin ve ışıklı tabela'] },
+  { name: 'Servis Zinciri', req: { jobs: 70, rep: 65, branches: 1, cash: 900000 }, perks: ['3 şubeye kadar', 'Tır sözleşmeleri', 'Usta adayları daha yetenekli'] },
+  { name: 'Garage Zero Holding', req: { jobs: 150, rep: 75, branches: 3, cash: 2500000 }, perks: ['Merkez plaza kulesi', '6 şubeye kadar', 'Tüm şubeler +%20 kâr'] },
+];
+const BRANCH_LIMIT = [0, 0, 1, 3, 6];
+const DISTRICTS = [
+  { name: 'Çarşı', cost: 600000, base: 14000 }, { name: 'Sanayi Sitesi', cost: 750000, base: 18000 },
+  { name: 'Üniversite', cost: 700000, base: 15000 }, { name: 'Sahil Yolu', cost: 950000, base: 22000 },
+  { name: 'Organize Sanayi', cost: 1200000, base: 28000 }, { name: 'Havalimanı Yolu', cost: 1500000, base: 34000 },
+];
+const BRANCH_UPGRADE = [0, 250000, 500000];   // seviye 1→2, 2→3
+const CONTRACT_COMPANIES = [
+  { name: 'Hızlı Kargo', truck: false }, { name: 'Sarı Taksi Kooperatifi', truck: false }, { name: 'Belediye Filo', truck: false },
+  { name: 'Anadolu Lojistik', truck: true }, { name: 'Ege Nakliyat', truck: true }, { name: 'Market Zinciri Dağıtım', truck: true },
+];
 // ================= GARAGE ZERO — SESLER (WebAudio sentez) =================
 const SFX = {
   ctx: null, master: null, last: {},
@@ -911,8 +942,8 @@ function addRep(n) { S.rep = Math.max(0, Math.min(100, S.rep + n)); }
 function pay(n) { if (S.cash < n) { UI.toast(`Yeterli paran yok (${fmt(n)} gerekli).`, 'bad'); return false; } return true; }
 
 // ---------- araç üretimi ----------
-function genCar(L, nFaults) {
-  const models = Object.keys(MODELS).filter(k => MODELS[k].lvl <= Math.max(1, L));
+function genCar(L, nFaults, truck) {
+  const models = Object.keys(MODELS).filter(k => MODELS[k].lvl <= Math.max(1, L) && !!MODELS[k].truck === !!truck);
   const age = ri(2, 17);
   const c = {
     id: uid(), model: pick(models), color: pick(CAR_COLORS), year: YEAR - age, km: round1k(age * ri(9000, 24000)),
@@ -930,8 +961,9 @@ function symptomsOf(c) {
   c.faults.forEach(f => { const l = shuffle(FAULTS[f].sym.slice()); s.add(l[0]); if (l[1] && Math.random() < 0.55) s.add(l[1]); });
   return [...s];
 }
-function genJob() {
+function genJob(truck) {
   const L = lvl(); let c;
+  if (truck) { c = genCar(Math.max(2, L), Math.random() < 0.5 ? 1 : 2, true); c.truck = true; c.owner = 'customer'; c.mods = []; c.modReq = []; c.sym = symptomsOf(c); c.clean = Math.random() < 0.3; c.cust = { name: pick(['Mehmet Şoför', 'Kaya Nakliyat', 'Demir Lojistik', 'Ali Kaptan', 'Güney Taşımacılık']), deadline: S.day + ri(0, 1) }; return c; }
   const r = Math.random();
   if (r < 0.2) { c = genCar(L, 0); c.faults = ['maintenance']; if (Math.random() < 0.3) { const x = genCar(L, 1); if (x.faults[0] && FAULTS[x.faults[0]].comp !== 'oilcap') c.faults.push(x.faults[0]); } }
   else if (r < 0.3) { c = genCar(L, 0); c.faults = ['tires']; }
@@ -971,7 +1003,7 @@ function genWorker(role, maxSkill) {
   return { id: 'w' + (S.idc++), name: pick(STAFF_NAMES), role, skill, spec, wage: wageFor(role, skill), xp: 0, jobs: 0, bay: null, queue: [], errand: null, energy: 100, morale: 70, todayJobs: 0 };
 }
 function refreshCandidates() {
-  const top = Math.min(5, 2 + Math.floor(lvl() / 2) + Math.floor(S.rep / 40));
+  const top = Math.min(5, 2 + Math.floor(lvl() / 2) + Math.floor(S.rep / 40) + ((S.tier || 0) >= 3 ? 1 : 0));
   S.cands = [genWorker('usta', top), genWorker('usta', Math.max(1, top - 1)), genWorker('cirak', 3)];
 }
 
@@ -1021,6 +1053,9 @@ function scheduleDay(first) {
     for (let i = 0; i < callN; i++) S.events.push({ at: first && i === 0 ? 20 : ri(5, 470), type: 'call' });
     S.appts.filter(a => a.day === S.day).forEach(a => S.events.push({ at: a.at, type: 'appt', id: a.id }));
     if (S.dayEvent === 'fleet') S.events.push({ at: ri(20, 200), type: 'cust' });
+    if ((S.tier || 0) >= 1) S.events.push({ at: ri(30, 400), type: 'cust' });
+    if (S.truckHall) for (let i = 0; i < ri(1, 2 + ((S.tier || 0) >= 3 ? 1 : 0)); i++) S.events.push({ at: ri(30, 420), type: 'truck' });
+    (S.contracts || []).forEach(k => { if (Math.random() < k.perDay) S.events.push({ at: ri(20, 400), type: 'contract', id: k.id }); });
     (S.warranty || []).filter(w => w.day === S.day).forEach(w => S.events.push({ at: ri(15, 300), type: 'warranty', id: w.id }));
   }
   S.cars.filter(c => c.listed).forEach(c => scheduleBuyers(c));
@@ -1051,7 +1086,7 @@ function gameTick(dt) {
 
 function freeApron() { const used = new Set(S.jobs.filter(j => j.apron != null).map(j => j.apron)); return [0, 1, 2, 3].find(i => !used.has(i)); }
 function arrive(j, patience) {
-  const slot = freeApron(); if (slot == null) return false;
+  const slot = j.truck ? (S.jobs.some(x => x.apron === 10) ? null : 10) : freeApron(); if (slot == null) return false;
   j.apron = slot; j.leaveAt = S.minute + patience * (S.up.lounge ? 1.5 : 1) * cfg('patience');
   S.jobs.push(j); syncScene(); UI.render();
   return true;
@@ -1079,6 +1114,17 @@ function fireEvent(e) {
     S.appts = S.appts.filter(x => x !== a);
     UI.toast(`Randevulu müşteri geldi: ${a.job.cust.name}`, 'ok');
     log(`${a.job.cust.name} randevusuna zamanında geldi.`);
+  }
+  if (e.type === 'truck' || e.type === 'contract') {
+    const K = e.type === 'contract' ? (S.contracts || []).find(k => k.id === e.id) : null;
+    if (e.type === 'contract' && !K) return;
+    const truck = e.type === 'truck' || (K && K.truck);
+    if (truck && !S.truckHall) return;
+    const j = genJob(truck);
+    if (K) { j.contract = K.id; j.cust.name = K.company; j.cust.deadline = S.day + 1; j.regular = false; }
+    if (!arrive(j, ri(180, 260))) { if (e.at + 30 < dayMinutes() - 60) addEvent(Object.assign(e, { at: e.at + 30 })); return; }
+    UI.toast(truck ? `Tır geldi: ${j.cust.name} — ${MODELS[j.model].name}` : `Sözleşmeli araç geldi: ${j.cust.name}`, 'info'); SFX.horn();
+    log(`${j.cust.name} ${MODELS[j.model].name} ile geldi${K ? ' (sözleşme)' : ''}.`);
   }
   if (e.type === 'warranty') {
     const w = (S.warranty || []).find(x => x.id === e.id); if (!w) return;
@@ -1140,7 +1186,7 @@ function cancelTask(wid, tid) {
   const w = staffById(wid); if (!w) return;
   const i = w.queue.findIndex(t => t.id === tid); if (i < 0) return;
   const t = w.queue[i];
-  if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1;
+  if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + (t.qty || 1);
   w.queue.splice(i, 1);
   if (i === 0) { const n = WNPC[w.id]; if (n) { n.root.visible = true; } workerGoHome(w); }
   UI.render(); if (UI.inspect) UI.renderInspect();
@@ -1160,7 +1206,7 @@ function processWorker(w, dm) {
   if (!t._rt.started) {
     if (!carParked(c.id) || !n) return;
     const view = t.comp ? COMPS[t.comp].view : t.part ? COMPS[FAULTS[t.part].comp].view : (t.type === 'overview' ? 'hood' : null);
-    if (view === 'under') { if (c.bay == null) { UI.toast('Alt takım işi için araç liftte olmalı.', 'bad'); w.queue.shift(); return; } c.lifted = true; }
+    if (view === 'under') { if (c.bay == null) { UI.toast('Alt takım işi için araç liftte olmalı.', 'bad'); w.queue.shift(); return; } if (!c.truck) c.lifted = true; }
     if (view === 'hood') c.hoodOpen = true;
     if (t.type === 'gtest' && t.test === 'drive') { c.lifted = false; c.hoodOpen = false; }
     syncScene();
@@ -1252,8 +1298,9 @@ function replacePart(id, f) {
   const c = carById(id);
   if (c.bay == null) return UI.toast('Parça değişimi için araç liftte olmalı.', 'bad');
   if (c.fixed.includes(f) || c.wasted.includes(f) || tasksFor(id).some(x => x.t.part === f)) return UI.toast('Bu parça zaten yenilendi ya da sırada.', 'bad');
-  if (!(S.stock[f] > 0)) return UI.partMissing(f);
-  if (enqueue(c, { type: 'part', part: f, min: laborTime(f) })) S.stock[f]--;
+  const need = c.truck ? TRUCK_STOCK : 1;
+  if (!((S.stock[f] || 0) >= need)) { if (c.truck) UI.toast(`Tır için ${need} adet ${FAULTS[f].part} gerekir.`, 'bad'); return UI.partMissing(f); }
+  if (enqueue(c, { type: 'part', part: f, min: Math.round(laborTime(f) * (c.truck ? TRUCK_LABOR_MUL : 1)), qty: need })) S.stock[f] -= need;
 }
 function cleanCar(id) {
   const c = carById(id); if (c.clean) return;
@@ -1282,7 +1329,7 @@ function hire(id) {
 }
 function fire(id) {
   const w = staffById(id); if (!w) return;
-  w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1; });
+  w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + (t.qty || 1); });
   if (w.errand) return UI.toast('Parça almaya gitti; dönünce çıkarabilirsin.', 'bad');
   S.staff = S.staff.filter(x => x !== w);
   addMoney(-w.wage, `${wname(w)} — tazminat`);
@@ -1445,13 +1492,13 @@ function haggleEnd() {
 // ---------- iş kabul ----------
 function acceptJob(id) {
   const j = jobById(id); if (!j) return;
-  const b = freeBay(); if (b < 0) return UI.toast('Boş lift yok. Bir aracı teslim et ya da lift al.', 'bad');
+  const b = j.truck ? freeTruckBay() : freeBay(); if (b < 0) return UI.toast(j.truck ? 'Tır servisinde boş kanal yok.' : 'Boş lift yok. Bir aracı teslim et ya da lift al.', 'bad');
   S.jobs = S.jobs.filter(x => x !== j);
   j.waitedLong = j.leaveAt && j.leaveAt - S.minute < 40;
   j.apron = null; j.bay = b; j.accepted = S.day; j.leaveAt = null; S.cars.push(j);
   if (j.appt) addRep(1);
-  log(`${j.cust.name} — ${MODELS[j.model].name} Lift ${b + 1}’e alındı.`);
-  if (!S.staff.some(w => w.role === 'usta' && w.bay === b)) UI.toast(`Lift ${b + 1}’de usta yok — Personel’den ata.`, 'bad');
+  log(`${j.cust.name} — ${MODELS[j.model].name} ${bayName(b)}’e alındı.`);
+  if (!S.staff.some(w => w.role === 'usta' && w.bay === b)) UI.toast(`${bayName(b)}’de usta yok — Personel’den ata.`, 'bad');
   Life.toBench(j.id);
   UI.selected = j.id; syncScene(); UI.openCar(j.id, 'info'); save();
 }
@@ -1464,6 +1511,9 @@ function jobLeaves(j, why, rep) {
   syncScene(); UI.render();
 }
 function freeBay() { for (let i = 0; i < S.bays; i++) if (!S.cars.some(c => c.bay === i)) return i; return -1; }
+function freeTruckBay() { if (!S.truckHall) return -1; for (let i = 4; i < 6; i++) if (!S.cars.some(c => c.bay === i)) return i; return -1; }
+function bayName(b) { return b >= 4 ? `Tır kanalı ${b - 3}` : `Lift ${b + 1}`; }
+function allBays() { const a = [...Array(S.bays).keys()]; if (S.truckHall) a.push(4, 5); return a; }
 function freeLot() { for (let i = 0; i < S.lot; i++) if (!S.cars.some(c => c.lot === i)) return i; return -1; }
 function moveToBay(id) {
   const c = carById(id), b = freeBay();
@@ -1490,6 +1540,7 @@ function globalResult(c, t) {
 }
 function ustaSpot(c, view) {
   const m = G.carMeshes[c.id], I = m.userData.info;
+  if (view === 'under' && I.truck) { const p = m.localToWorld(new THREE.Vector3(I.W / 2 + 0.7, 0, 0.8)); return { pos: [p.x, p.z], look: [m.position.x, m.position.z], pose: 'inspect' }; }
   if (view === 'under') { const p = m.localToWorld(new THREE.Vector3(0.35, 0, 0.6)); return { pos: [p.x, p.z], look: [m.position.x, m.position.z + 1], pose: 'workUp' }; }
   if (view === 'door') { const p = m.localToWorld(new THREE.Vector3(-(I.W / 2 + 0.45), 0, 0.25)); return { pos: [p.x, p.z], look: [m.position.x, m.position.z], pose: 'work' }; }
   const p = m.localToWorld(new THREE.Vector3(0, 0, I.L / 2 + 0.5)), e = m.localToWorld(new THREE.Vector3(0, 0, I.f0 + I.hoodLen / 2));
@@ -1500,8 +1551,8 @@ function deliver(id) {
   const c = carById(id); if (!c || c.owner !== 'customer') return;
   if (tasksFor(id).length) return UI.toast('Araç üzerinde süren iş var. Bitmesini bekle ya da iptal et.', 'bad');
   const correct = c.fixed, remaining = c.faults, wasted = c.wasted;
-  const parts = correct.reduce((s, f) => s + partPrice(f), 0) * (S.partMarkup || PART_MARKUP);
-  const labor = correct.reduce((s, f) => s + FAULTS[f].labor, 0) / 60 * S.laborRate;
+  const parts = correct.reduce((s, f) => s + partPrice(f), 0) * (S.partMarkup || PART_MARKUP) * (c.truck ? TRUCK_PART_MUL : 1);
+  const labor = correct.reduce((s, f) => s + FAULTS[f].labor, 0) / 60 * S.laborRate * (c.truck ? TRUCK_LABOR_MUL : 1);
   const tested = Object.keys(c.findings).length;
   const modsDone = (c.modReq || []).filter(k => (c.mods || []).includes(k)), modsMissing = (c.modReq || []).filter(k => !(c.mods || []).includes(k));
   const modBill = modsDone.reduce((s, k) => s + MODS[k].cost * MOD_MARKUP + MODS[k].labor / 60 * S.laborRate, 0);
@@ -1509,6 +1560,7 @@ function deliver(id) {
   if (modsDone.length) lines.push(`Modifiye: ${modsDone.map(k => MODS[k].name).join(', ')} — ${fmt(modBill)}`);
   if (modsMissing.length) { lines.push(`Yapılmayan istek: ${modsMissing.map(k => MODS[k].name).join(', ')}`); repD -= 2 * modsMissing.length; }
   if (c.fleet) { payN = Math.round(payN * 1.5); lines.push('Filo müşterisi: fatura %50 fazla ödendi.'); }
+  if (c.contract) { const K = (S.contracts || []).find(k => k.id === c.contract); if (K) { payN = Math.round(payN * K.payMul); K.done++; lines.push(`${K.company} sözleşmesi: fatura ×${K.payMul.toFixed(2).replace('.', ',')}`); if (remaining.length) { K.strikes++; lines.push('Sözleşme ihlali: arıza çözülmedi.'); } } }
   if (c.regular) lines.push('Sadık müşterin tekrar seni tercih etti.');
   if (c.tow) lines.push(`Çekici ücreti faturaya eklendi: ${fmt(TOW_FEE)}`);
   if (c.warranty) { payN = 0; lines.push('Garanti işi — ücret alınmadı.'); }
@@ -1665,6 +1717,7 @@ function endDay() {
   const wages = Math.round(S.staff.filter(w => w.trainDay !== S.day).reduce((s, w) => s + w.wage, 0) * cfg('costs'));
   if (wages) addMoney(-wages, `Personel maaşları (${S.staff.length} kişi)`);
   S.jobs.slice().forEach(j => jobLeaves(j));
+  S.cars.filter(c => c.owner === 'customer' && c.cust.deadline <= S.day && c.contract).forEach(c => { const K = (S.contracts || []).find(k => k.id === c.contract); if (K) { K.strikes++; addMoney(-5000, `${K.company} sözleşme cezası`); ev.push(`${K.company}: araç zamanında teslim edilmedi, 5.000 ₺ ceza.`); } });
   S.cars.filter(c => c.owner === 'customer' && c.cust.deadline <= S.day).forEach(c => {
     addRep(-6); ev.push(`${c.cust.name} beklemekten sıkıldı ve aracını aldı (itibar −6).`); addReview(c.cust.name, 1, REVIEW_TXT[1][2]);
     S.staff.forEach(w => { w.queue = w.queue.filter(t => { if (t.car === c.id && t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1; return t.car !== c.id; }); });
@@ -1691,7 +1744,7 @@ function endDay() {
   S.staff.slice().forEach(w => {
     let d = (w.todayJobs ? 2 : -1) + (w.energy < 20 ? -6 : 0) + (w.wage >= wageFor(w.role, w.skill) * 1.1 ? 3 : w.wage < wageFor(w.role, w.skill) ? -4 : 0) + ri(-2, 2);
     w.morale = Math.max(0, Math.min(100, (w.morale == null ? 70 : w.morale) + d));
-    if (w.morale < 20 && !w.errand && Math.random() < 0.4) { S.staff = S.staff.filter(x => x !== w); ev.push(`${wname(w)} moralsizdi, işi bıraktı!`); w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + 1; }); }
+    if (w.morale < 20 && !w.errand && Math.random() < 0.4) { S.staff = S.staff.filter(x => x !== w); ev.push(`${wname(w)} moralsizdi, işi bıraktı!`); w.queue.forEach(t => { if (t.type === 'part') S.stock[t.part] = (S.stock[t.part] || 0) + (t.qty || 1); }); }
     else if (w.morale < 30) ev.push(`${wname(w)} mutsuz (moral ${Math.round(w.morale)}). Prim ya da zam düşünebilirsin.`);
     if (w.trainDay === S.day) { if (w.trainKind === 'skill') { w.skill = Math.min(5, w.skill + 1); w.wage = wageFor(w.role, w.skill); } else { w.spec = w.trainKind; } ev.push(`${wname(w)} eğitimi tamamladı: ${w.trainKind === 'skill' ? stars(w.skill) : SPECS[w.spec].name}.`); w.trainDay = null; w.trainKind = null; }
     w.energy = 100; w.todayJobs = 0; w.bonusDay = 0;
@@ -1708,6 +1761,7 @@ function endDay() {
   S.weather = S.forecast || 'sunny'; S.forecast = pick(WEATHER_ORDER);
   ev.push(`Bugün hava: ${WEATHER[S.weather].name}. Yarın: ${WEATHER[S.forecast].name}.`);
   rollDayEvent(ev);
+  companyDay(ev);
   if (S.lic.galeri && S.day % 4 === 0) { S.auction = { day: S.day, lots: [genListing(), genListing(), genListing()].map(c => (c.note = 'İhale aracı — ekspertiz yok, olduğu gibi satılır.', c.ask = round1k(carValue(c, true) * 0.55), c)), done: {} }; ev.push('Bugün oto ihalesi var! Galeri → İhale sekmesine bak.'); }
   refreshMarket(false); refreshCandidates(); genGoals(); scheduleDay(false); checkAch(); applyWeather();
   ev.forEach(e => log(e));
@@ -1822,6 +1876,91 @@ function bidAuction(id, bid) {
   UI.toast(`İhaleyi kazandın: ${fmt(price)} (ikinci fiyat ihalesi).`, 'ok');
   syncScene(); UI.render(); save();
 }
+
+// ---------- v12: şirket ----------
+function tierReqs(i) {
+  const T = TIERS[i]; if (!T || !T.req) return [];
+  const r = T.req, out = [];
+  if (r.jobs) out.push({ t: `${r.jobs} başarılı tamir`, ok: S.stats.jobs >= r.jobs, v: S.stats.jobs });
+  if (r.rep) out.push({ t: `İtibar ${r.rep}`, ok: S.rep >= r.rep, v: S.rep });
+  if (r.rating) out.push({ t: `Puan ${r.rating.toFixed(1).replace('.', ',')}+`, ok: (rating() || 0) >= r.rating, v: (rating() || 0).toFixed(1) });
+  if (r.branches) out.push({ t: `${r.branches} şube`, ok: (S.branches || []).length >= r.branches, v: (S.branches || []).length });
+  if (r.cash) out.push({ t: `${fmt(r.cash)} yatırım`, ok: S.cash >= r.cash, v: fmt(S.cash) });
+  return out;
+}
+function upgradeTier() {
+  const n = (S.tier || 0) + 1, T = TIERS[n]; if (!T) return;
+  const reqs = tierReqs(n); if (!reqs.every(r => r.ok)) return UI.toast('Koşullar henüz tamam değil.', 'bad');
+  addMoney(-T.req.cash, `Şirket büyümesi: ${T.name}`, true);
+  S.tier = n; addRep(3); addXP(100);
+  log(`Şirket büyüdü: ${T.name}!`, 'ok'); SFX.cash(); setTimeout(() => SFX.ding(), 400);
+  UI.modal(`${T.name}`, `<div class="brand" style="gap:14px"><svg class="emb" viewBox="0 0 200 200" style="width:90px"><use href="#gzEmblem"/></svg><p class="big ok" style="font-size:30px">Yeni kademe!</p></div><ul class="plain">${T.perks.map(p => `<li>${p}</li>`).join('')}</ul>`, [{ t: 'Harika', cls: 'pri' }]);
+  if (n >= 1) genContractOffers();
+  syncScene(); UI.render(); save();
+}
+function buyTruckHall() {
+  if ((S.tier || 0) < 2) return UI.toast('Tır servisi için “Profesyonel Servis” kademesi gerekli.', 'bad');
+  if (S.truckHall || !pay(TRUCK_HALL_COST)) return;
+  addMoney(-TRUCK_HALL_COST, 'Tır servisi binası', true); S.truckHall = true;
+  log('Tır servisi açıldı! Personel’den tır kanallarına usta ata.', 'ok'); SFX.cash();
+  addEvent({ at: Math.min(dayMinutes() - 60, S.minute + 20), type: 'truck' });
+  syncScene(); UI.render(); save();
+}
+function buyBranch(di) {
+  const D = DISTRICTS[di], lim = BRANCH_LIMIT[S.tier || 0];
+  S.branches = S.branches || [];
+  if (S.branches.length >= lim) return UI.toast(lim ? `Bu kademede en fazla ${lim} şube.` : 'Şube için “Profesyonel Servis” kademesi gerekli.', 'bad');
+  if (S.branches.some(b => b.district === D.name)) return;
+  if (!pay(D.cost)) return;
+  const used = new Set(S.branches.map(b => b.bld)), free = CITY.shopFronts.map((_, i) => i).filter(i => !used.has(i));
+  addMoney(-D.cost, `Şube: ${D.name}`, true);
+  S.branches.push({ id: 'b' + (S.idc++), district: D.name, di, level: 1, mgr: ri(1, 3), bld: free.length ? pick(free) : -1, total: 0, last: 0, day: S.day });
+  log(`${D.name} şubesi açıldı.`, 'ok'); SFX.cash(); syncScene(); UI.render(); save();
+}
+function upgradeBranch(id) {
+  const b = (S.branches || []).find(x => x.id === id); if (!b || b.level >= 3) return;
+  const cost = BRANCH_UPGRADE[b.level]; if (!pay(cost)) return;
+  addMoney(-cost, `Şube büyütme: ${b.district}`, true); b.level++; UI.toast(`${b.district} şubesi seviye ${b.level} oldu.`, 'ok'); UI.render(); save();
+}
+function trainBranchMgr(id) {
+  const b = (S.branches || []).find(x => x.id === id); if (!b || b.mgr >= 5) return;
+  const cost = 40000 * b.mgr; if (!pay(cost)) return;
+  addMoney(-cost, `Şube müdürü eğitimi: ${b.district}`, true); b.mgr++; UI.render(); save();
+}
+function sellBranch(id) {
+  const b = (S.branches || []).find(x => x.id === id); if (!b) return;
+  const D = DISTRICTS[b.di], val = Math.round(D.cost * 0.7 + BRANCH_UPGRADE.slice(1, b.level).reduce((a, c) => a + c, 0) * 0.6);
+  S.branches = S.branches.filter(x => x !== b); addMoney(val, `Şube satıldı: ${b.district}`, true);
+  log(`${b.district} şubesi ${fmt(val)}’ye satıldı.`); syncScene(); UI.render(); save();
+}
+function genContractOffers() {
+  S.contractOffers = [];
+  const pool = CONTRACT_COMPANIES.filter(c => !c.truck || ((S.tier || 0) >= 3 && S.truckHall)).filter(c => !(S.contracts || []).some(k => k.company === c.name));
+  shuffle(pool).slice(0, 2).forEach(c => S.contractOffers.push({ id: 'k' + (S.idc++), company: c.name, truck: c.truck, perDay: +rnd(0.45, 0.9).toFixed(2), payMul: +rnd(1.2, 1.5).toFixed(2), days: ri(8, 15) }));
+}
+function acceptContract(id) {
+  const o = (S.contractOffers || []).find(x => x.id === id); if (!o) return;
+  if (o.truck && !S.truckHall) return UI.toast('Bu sözleşme için tır servisi gerekli.', 'bad');
+  S.contractOffers = S.contractOffers.filter(x => x !== o);
+  S.contracts = S.contracts || [];
+  S.contracts.push(Object.assign({}, o, { until: S.day + o.days, strikes: 0, done: 0 }));
+  log(`${o.company} ile ${o.days} günlük sözleşme imzalandı.`, 'ok'); SFX.ding(); UI.render(); save();
+}
+function companyDay(ev) {
+  (S.branches || []).forEach(b => {
+    const D = DISTRICTS[b.di];
+    let p = D.base * [1, 1, 1.35, 1.75][b.level] * rnd(0.55, 1.35) * (0.85 + b.mgr * 0.06) * (0.9 + S.rep / 500) * ((S.tier || 0) >= 4 ? 1.2 : 1);
+    if (Math.random() < 0.08) p = -D.base * rnd(0.2, 0.5);
+    p = Math.round(p / 100) * 100; b.last = p; b.total += p;
+    addMoney(p, `Şube ${b.district}`, false);
+  });
+  if ((S.branches || []).length) ev.push(`Şubelerden net: ${fmt(S.branches.reduce((s, b) => s + b.last, 0))}.`);
+  (S.contracts || []).slice().forEach(k => {
+    if (k.strikes >= 3) { S.contracts = S.contracts.filter(x => x !== k); addRep(-5); ev.push(`${k.company} sözleşmeyi feshetti (3 ihlal).`); }
+    else if (S.day >= k.until) { S.contracts = S.contracts.filter(x => x !== k); if (!k.strikes) { const bon = 15000 + k.done * 3000; addMoney(bon, `${k.company} sözleşme primi`); addRep(3); ev.push(`${k.company} sözleşmesi kusursuz bitti: ${fmt(bon)} prim.`); } else ev.push(`${k.company} sözleşmesi sona erdi.`); }
+  });
+  if ((S.tier || 0) >= 1 && (S.day % 5 === 0 || !(S.contractOffers || []).length)) genContractOffers();
+}
 // ================= GARAGE ZERO — ARAÇ MODELLERİ =================
 // Yerel eksen: +z = aracın önü, +y = yukarı
 const CAR_DIM = {
@@ -1855,6 +1994,7 @@ function plateTexture() {
 }
 
 function buildCar(car) {
+  if (MODELS[car.model] && MODELS[car.model].truck) return buildTruck(car);
   const style = (S && S.settings && S.settings.carStyle) || 'modern';
   return style === 'classic' ? buildCarClassic(car) : buildCarModern(car);
 }
@@ -2096,6 +2236,62 @@ function addScratches(g, W, L, yb, H) {
   const dent = new THREE.Mesh(new THREE.CircleGeometry(0.22, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25, depthWrite: false }));
   dent.position.set(-(W / 2 + 0.072), yb + H * 0.55, L / 2 - 0.6); dent.rotation.y = -Math.PI / 2; dent.scale.set(1, 0.6, 1); g.add(dent);
 }
+
+// ---------- tır çekici ----------
+function buildTruck(car) {
+  const g = new THREE.Group();
+  const L = 7.2, W = 2.4, r = 0.52, yb = 0.78, yT = 1.25, f0 = 1.6, hoodLen = 2.0, wz = L / 2 - 1.15;
+  const paint = umat(car.color, { metalness: 0.4, roughness: 0.45 - (car.paint / 100) * 0.2 });
+  const dark = cmat(0x1a1d21, { roughness: 0.8 }), steel = cmat(0x8c939b, { metalness: 0.8, roughness: 0.3 }), chrome = cmat(0xd5d9de, { metalness: 0.9, roughness: 0.2 });
+  const glass = (car.mods || []).includes('tint') ? cmat(0x07090c, { metalness: 0.8, roughness: 0.05 }) : cmat(0x1c2836, { metalness: 0.7, roughness: 0.08 });
+  // şasi
+  [-1, 1].forEach(sx => { const rail = box(0.18, 0.28, L - 0.4, dark); rail.position.set(sx * 0.45, yb + 0.1, -0.1); g.add(rail); });
+  const cross = box(1.1, 0.12, 0.2, dark); cross.position.set(0, yb + 0.1, -2.6); g.add(cross);
+  const fifth = cyl(0.7, 0.7, 0.1, 18, cmat(0x2b2f34, { metalness: 0.6 })); fifth.position.set(0, yb + 0.35, -2.1); g.add(fifth);
+  const deck = box(2.0, 0.08, 2.6, cmat(0x3b4148, { metalness: 0.5 })); deck.position.set(0, yb + 0.28, -2.3); g.add(deck);
+  // yakıt depoları, akü kutusu
+  [-1, 1].forEach(sx => { const t = cyl(0.32, 0.32, 1.3, 16, chrome); t.rotation.x = Math.PI / 2; t.position.set(sx * (W / 2 - 0.3), yb + 0.05, -0.4); g.add(t); });
+  // kabin (öne devrilir)
+  const cabPivot = new THREE.Group(); cabPivot.position.set(0, yT, L / 2 - 0.05); g.add(cabPivot);
+  const cab = new THREE.Group(); cabPivot.add(cab);
+  const cabL = 2.5, cabH = 2.45;
+  const shell = box(W, cabH, cabL, paint); shell.position.set(0, cabH / 2, -cabL / 2); cab.add(shell);
+  const roofB = box(W * 0.95, 0.45, cabL * 0.85, paint); roofB.position.set(0, cabH + 0.2, -cabL / 2 - 0.15); cab.add(roofB);
+  const ws = box(W * 0.86, 0.95, 0.06, glass); ws.position.set(0, cabH * 0.66, 0.01); cab.add(ws);
+  [-1, 1].forEach(sx => {
+    const sw = box(0.06, 0.75, 0.9, glass); sw.position.set(sx * (W / 2 + 0.005), cabH * 0.66, -0.6); cab.add(sw);
+    const mir = box(0.08, 0.5, 0.18, dark); mir.position.set(sx * (W / 2 + 0.25), cabH * 0.62, -0.1); cab.add(mir);
+    const arm = box(0.25, 0.05, 0.05, dark); arm.position.set(sx * (W / 2 + 0.12), cabH * 0.8, -0.1); cab.add(arm);
+    const step = box(0.5, 0.06, 0.35, steel); step.position.set(sx * (W / 2 - 0.2), -0.25, -0.9); cab.add(step);
+    const stack = cyl(0.09, 0.09, 2.6, 10, chrome); stack.position.set(sx * (W / 2 - 0.15), 1.0, -cabL - 0.15); cab.add(stack);
+  });
+  const grille = box(W * 0.6, 0.9, 0.06, cmat(0x2b2f34, { metalness: 0.6 })); grille.position.set(0, 0.55, 0.02); cab.add(grille);
+  for (let i = 0; i < 5; i++) { const b = box(W * 0.58, 0.04, 0.07, chrome); b.position.set(0, 0.2 + i * 0.17, 0.04); cab.add(b); }
+  const fb = box(W + 0.05, 0.4, 0.3, umat(0x1a1d21)); fb.position.set(0, -0.15, 0.05); cab.add(fb);
+  const hl = new THREE.MeshStandardMaterial({ color: 0xfff6d8, emissive: 0xfff0c0, emissiveIntensity: (car.mods || []).includes('led') ? 1.2 : 0.5 });
+  [-1, 1].forEach(sx => { const h = box(0.4, 0.18, 0.06, hl); h.position.set(sx * (W / 2 - 0.35), 0.0, 0.2); cab.add(h); });
+  const beacon = box(1.0, 0.1, 0.2, new THREE.MeshStandardMaterial({ color: 0xffb020, emissive: 0xff8a00, emissiveIntensity: 0.6 })); beacon.position.set(0, cabH + 0.48, -0.4); cab.add(beacon);
+  // ticari plaka şeridi
+  const strip = box(W + 0.01, 0.12, cabL * 0.9, umat(0xe6e2d8)); strip.position.set(0, cabH * 0.3, -cabL / 2); cab.add(strip);
+  // tekerler: ön aks + arka tandem
+  const tireM = umat(0x131313, { roughness: 0.92, metalness: 0 }), hubM = cmat(0xb9bec4, { metalness: 0.8, roughness: 0.3 });
+  const wheels = [];
+  [[wz, 1], [-L / 2 + 1.0, 2], [-L / 2 + 2.15, 2]].forEach(([z, n]) => [-1, 1].forEach(sx => {
+    const w = new THREE.Group();
+    const t = cyl(r, r, n === 2 ? 0.55 : 0.32, 20, tireM); t.rotation.z = Math.PI / 2; w.add(t);
+    const hub = cyl(r * 0.55, r * 0.55, (n === 2 ? 0.56 : 0.33), 12, hubM); hub.rotation.z = Math.PI / 2; w.add(hub);
+    w.position.set(sx * (W / 2 - (n === 2 ? 0.32 : 0.2)), r, z); g.add(w); wheels.push(w);
+  }));
+  [-1, 1].forEach(sx => { const mud = box(0.6, 0.06, 2.4, dark); mud.position.set(sx * (W / 2 - 0.3), r * 2 + 0.08, -L / 2 + 1.55); g.add(mud); });
+  const info = { L, W, yb, yT, wz, f0, hoodLen, r, truck: true };
+  const comps = addEngineBay(g, info);
+  Object.assign(comps, addUnderbody(g, info));
+  comps.tires = wheels[0]; wheels.forEach(w => w.traverse(o => o.userData.comp = 'tires'));
+  comps.body = fb; fb.userData.comp = 'body';
+  if (!car.clean) { const dirt = new THREE.Mesh(new THREE.PlaneGeometry(cabL, 0.5), new THREE.MeshBasicMaterial({ color: 0x5c4a35, transparent: true, opacity: 0.45, depthWrite: false })); dirt.rotation.y = Math.PI / 2; dirt.position.set(W / 2 + 0.01, 0.35, -cabL / 2); cab.add(dirt); }
+  const ret = finishCar(g, Object.assign({}, car, { clean: true }), { hoodPivot: cabPivot, wheels, comps, h: yT + cabH + 0.6, info, hoodAng: 0.95 });
+  return ret;
+}
 // ================= GARAGE ZERO — İNSANLAR =================
 const SKIN = [0xe8c3a0, 0xd6a77f, 0xb5835a, 0x8d5a3b, 0xf1d2b6];
 const HAIR = [0x2a1d14, 0x4a3020, 0x111111, 0x7a5a3a, 0x9a9a9a, 0xc9a06a];
@@ -2232,7 +2428,7 @@ function syncWorkers() {
   });
 }
 function workerHome(w) {
-  if (w.bay != null && w.bay < S.bays) return [BAY_X[w.bay] + (w.role === 'usta' ? 2.2 : -2.2), BAY_Z + 2.4];
+  if (w.bay != null && (w.bay < S.bays || (w.bay >= 4 && S.truckHall))) { const p = bayPos(w.bay); return [p.x + (w.role === 'usta' ? (w.bay >= 4 ? 2.4 : 2.2) : -2.2), p.z + (w.bay >= 4 ? 4.6 : 2.4)]; }
   const i = S.staff.indexOf(w);
   return [-1 + (i % 5) * 1.1, -5.6];
 }
@@ -2295,7 +2491,7 @@ function shopSignTexture(text, bg, fg) {
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
 }
 
-const CITY = { lamps: [], lampLights: [], windowsMats: [], traffic: [] };
+const CITY = { lamps: [], lampLights: [], windowsMats: [], traffic: [], shopFronts: [] };
 
 function buildCity() {
   const s = G.scene;
@@ -2322,7 +2518,8 @@ function buildCity() {
   let x = -64, si = 0;
   while (x < 64) {
     const w = rnd(7, 11), h = rnd(3.6, 4.6), d = rnd(7, 10);
-    addBuilding(x + w / 2, 21.5 + d / 2, w, h, d, pick(palettes), shops[si++ % shops.length], 0);
+    const bg = addBuilding(x + w / 2, 21.5 + d / 2, w, h, d, pick(palettes), shops[si++ % shops.length], 0);
+    if (Math.abs(x + w / 2) < 45) CITY.shopFronts.push(bg);
     x += w + rnd(0.3, 1.2);
   }
   // arka sıra (dükkân arkası)
@@ -2334,8 +2531,8 @@ function buildCity() {
     x += w + rnd(0.5, 1.5);
   }
   for (let i = 0; i < 5; i++) addBuilding(-15 + i * 12, -24, 11, rnd(14, 26), 10, pick(palettes), null, Math.PI);
-  addBuilding(-40, -6.5, 10, 12, 14, '#b9a089', null, Math.PI / 2);
-  addBuilding(-44, 5.5, 10, 4.2, 8, '#a8b4b8', ['OTO YIKAMA', '#2c5a99', '#fff'], Math.PI / 2);
+  CITY.sideBld = addBuilding(-40, -6.5, 10, 12, 14, '#b9a089', null, Math.PI / 2);
+  CITY.washBld = addBuilding(-44, 5.5, 10, 4.2, 8, '#a8b4b8', ['OTO YIKAMA', '#2c5a99', '#fff'], Math.PI / 2);
   addBuilding(48, 2, 10, 10, 16, '#d8cfc0', ['SİGORTA', '#23272c', '#fff'], -Math.PI / 2);
 
   // ağaçlar & lambalar
@@ -2379,7 +2576,7 @@ function buildCity() {
   const wsign = box(4.4, 1, 0.1, new THREE.MeshBasicMaterial({ map: shopSignTexture('MÜŞTERİ PARKI', '#2c5a99', '#fff') })); wsign.position.set(-21.5, 2.5, 9.8); s.add(wsign);
   [-23.4, -19.6].forEach(px => { const p = cyl(0.06, 0.06, 2.4, 6, poleM); p.position.set(px, 1.2, 9.8); s.add(p); });
   [[-24.5, -3.6], [-18.5, -3.6]].forEach(([x, z], i) => {
-    const fake = { id: 'p' + i, model: pick(Object.keys(MODELS)), color: pick(CAR_COLORS), paint: 80, clean: true };
+    const fake = { id: 'p' + i, model: pick(Object.keys(MODELS).filter(k => !MODELS[k].truck)), color: pick(CAR_COLORS), paint: 80, clean: true };
     const m = buildCar(fake); m.position.set(x, 0, z); m.rotation.y = Math.PI / 2; s.add(m);
   });
   // trafik
@@ -2409,7 +2606,9 @@ function addBuilding(x, z, w, h, d, color, sign, rot) {
     const awn = box(w * 0.85, 0.08, 1.4, cmat(new THREE.Color(sign[1]).getHex())); awn.position.set(0, 2.6, -d / 2 - 0.7); awn.rotation.x = -0.25; g.add(awn);
     const win = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.7, 1.8), new THREE.MeshStandardMaterial({ color: 0x9fbfd0, metalness: 0.5, roughness: 0.1, emissive: 0xffd98a, emissiveIntensity: 0 }));
     win.position.set(0, 1.2, -d / 2 - 0.02); win.rotation.y = Math.PI; g.add(win); CITY.windowsMats.push(win.material);
+    g.userData.sign = st; g.userData.awn = awn; g.userData.signDef = sign; g.userData.w = w;
   }
+  return g;
 }
 
 function updateTraffic(dt) {
@@ -2453,6 +2652,9 @@ function updateDaylight(f) {
 // ================= GARAGE ZERO — 3D SAHNE =================
 const BAY_X = [-9, -3, 3, 9];
 const BAY_Z = -1.2;
+const TRUCK_BAYS = [[-45.5, -3.6], [-37.5, -3.6]];
+const TRUCK_WAIT = { x: -41.5, z: 7.2 };
+function bayPos(i) { return i >= 4 ? { x: TRUCK_BAYS[i - 4][0], z: TRUCK_BAYS[i - 4][1] } : { x: BAY_X[i], z: BAY_Z }; }
 const LOT_X = [17.5, 20.5, 23.5, 26.5, 29.5, 32.5, 35.5, 38.5];
 const LOT_Z = 4.5;
 
@@ -2511,6 +2713,7 @@ function initScene() {
 
   initStaff();
   buildExtras();
+  buildCompanyStructures();
   applyGfx();
   spawnPedestrians(window.innerWidth < 800 ? 5 : 9);
   bindCameraInput(canvas);
@@ -2628,8 +2831,9 @@ function makeLotSlot(x, i) {
 // ---------- araç yerleşimi & sürüş ----------
 function carSlot(car) {
   if (car.out) return null;
-  if (car.bay != null) return { key: 'b' + car.bay, x: BAY_X[car.bay], z: BAY_Z };
+  if (car.bay != null) { const p = bayPos(car.bay); return { key: 'b' + car.bay, x: p.x, z: p.z }; }
   if (car.lot != null) return { key: 'l' + car.lot, x: LOT_X[car.lot], z: LOT_Z };
+  if (car.apron === 10) return { key: 'a10', x: TRUCK_WAIT.x, z: TRUCK_WAIT.z };
   if (car.apron != null) return { key: 'a' + car.apron, x: WAIT_X[car.apron], z: APRON_Z };
   return null;
 }
@@ -2665,7 +2869,7 @@ function syncScene() {
       driveCar(m, routeTo(m.position, slot), 7, () => { if (car.apron != null && car.owner === 'customer' && !car._custSpawned) Life.customerArrived(car); });
       m.userData.slotKey = slot.key;
     }
-    m.userData.tY = car.bay != null && car.lifted ? 1.55 : 0;
+    m.userData.tY = car.bay != null && car.bay < 4 && car.lifted ? 1.55 : 0;
     m.userData.tHood = car.hoodOpen ? 1 : 0;
   });
   Object.keys(G.carMeshes).forEach(id => {
@@ -2680,6 +2884,7 @@ function syncScene() {
   });
   G.lotMarks.forEach((m, i) => { m.visible = i < S.lot; });
   if (G.booth) G.booth.visible = !!S.up.paint;
+  syncCompany();
   if (G.lounge) G.lounge.visible = !!S.up.lounge;
   if (G.tireMach) G.tireMach.visible = !!S.up.tireMachine;
   if (G.bodyBench) G.bodyBench.visible = !!S.up.bodyShop;
@@ -2738,10 +2943,17 @@ function focusCar(id, view) {
   if (!p) return;
   const h = m ? m.rotation.y : Math.PI;
   const c = G.cam;
-  if (view === 'hood' && m) {
+  if (view === 'hood' && m && m.userData.info.truck) {
+    const I = m.userData.info;
+    c.tTarget.copy(m.localToWorld(new THREE.Vector3(0, I.yT + 0.2, I.f0 + I.hoodLen * 0.5)));
+    c.tYaw = h + 0.95; c.tPitch = 0.9; c.tDist = 5.6; c.minP = 0.1; c.maxP = 1.4;
+  } else if (view === 'hood' && m) {
     const I = m.userData.info;
     c.tTarget.copy(m.localToWorld(new THREE.Vector3(0, I.yT + 0.15, I.f0 + I.hoodLen * 0.5)));
     c.tYaw = h + 0.25; c.tPitch = 0.8; c.tDist = window.innerWidth <= 760 ? 3.1 : 3.6; c.minP = 0.1; c.maxP = 1.4;
+  } else if (view === 'under' && m && m.userData.info.truck) {
+    c.tTarget.copy(m.position).add(new THREE.Vector3(0, 0.55, 0));
+    c.tYaw = h + Math.PI / 2 + 0.3; c.tPitch = -0.12; c.tDist = 4.6; c.minP = -0.4; c.maxP = 0.8;
   } else if (view === 'under' && m) {
     c.tTarget.copy(m.position).add(new THREE.Vector3(0, 1.45, 0));
     c.tYaw = h + Math.PI / 2 + 0.35; c.tPitch = -0.42; c.tDist = 3.6; c.minP = -0.75; c.maxP = 0.6;
@@ -2839,7 +3051,7 @@ function loop() {
       u.wheels.forEach(w => w.rotation.x += step / u.info.r);
     }
     u.y += ((u.tY || 0) - u.y) * k * 0.5; m.position.y = u.y;
-    u.hoodT += ((u.tHood || 0) - u.hoodT) * k; u.hoodPivot.rotation.x = -1.15 * u.hoodT;
+    u.hoodT += ((u.tHood || 0) - u.hoodT) * k; u.hoodPivot.rotation.x = (u.hoodAng || -1.15) * u.hoodT;
     if (u.engineBay) u.engineBay.visible = u.hoodT > 0.08;
   });
   G.bays.forEach(b => { b.liftY += (b.tLiftY - b.liftY) * k * 0.5; b.arms.position.y = b.liftY; });
@@ -2992,6 +3204,68 @@ function applyCustom() {
   if (G.ring) G.ring.material.color.set(C.accent);
   syncScene();
 }
+
+// ---------- şirket yapıları ----------
+function buildCompanyStructures() {
+  const s = G.scene;
+  // tır servisi
+  const th = new THREE.Group(); th.position.set(-41.5, 0, -4); s.add(th); G.truckHall = th; th.visible = false;
+  const wallM = mat(0x5b6168), trimM = mat(0x2b2f34), roofM = mat(0x4b5158, { metalness: 0.4 });
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), mat(0x4a4f55, { roughness: 0.6 })); fl.rotation.x = -Math.PI / 2; fl.position.set(0, 0.03, 0); fl.receiveShadow = true; th.add(fl);
+  const back = box(18.4, 6.5, 0.4, wallM); back.position.set(0, 3.25, -7); th.add(back);
+  [-9, 9].forEach(x => { const w = box(0.4, 6.5, 14, wallM); w.position.set(x, 3.25, 0); th.add(w); });
+  const band = box(18.6, 1.4, 0.5, trimM); band.position.set(0, 5.9, 7); th.add(band);
+  [-9, 0, 9].forEach(x => { const col = box(0.6, 6.5, 0.6, trimM); col.position.set(x, 3.25, 7); th.add(col); });
+  for (let i = 0; i < 6; i++) { const b = box(18.2, 0.2, 0.25, roofM); b.position.set(0, 6.4, -6 + i * 2.5); th.add(b); }
+  G.truckSignMat = new THREE.MeshBasicMaterial({ map: labelTexture(['TIR SERVİSİ', 'AĞIR VASITA']) });
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.2), G.truckSignMat); sg.position.set(0, 5.9, 7.27); th.add(sg);
+  TRUCK_BAYS.forEach(([bx]) => {
+    const pit = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 8.5), new THREE.MeshBasicMaterial({ color: 0x15181b })); pit.rotation.x = -Math.PI / 2; pit.position.set(bx + 41.5, 0.035, 0.4); th.add(pit);
+    [-0.85, 0.85].forEach(o => { const e = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 8.5), new THREE.MeshBasicMaterial({ color: 0xf2c14e })); e.rotation.x = -Math.PI / 2; e.position.set(bx + 41.5 + o, 0.04, 0.4); th.add(e); });
+    const lamp = box(0.3, 0.06, 6, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xeaf2ff, emissiveIntensity: 1.1 })); lamp.position.set(bx + 41.5, 6.2, 0); th.add(lamp);
+  });
+  const rack = box(1, 2.4, 4, mat(0xb8322a, { metalness: 0.3 })); rack.position.set(-8.2, 1.2, -3.5); th.add(rack);
+  const tires = []; for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.22, 8, 18), mat(0x161616)); t.position.set(7.8, 0.6 + i * 0.01, -5 + i * 1.3); t.rotation.y = Math.PI / 2; th.add(t); tires.push(t); }
+  // ofis katı (kademe 1+)
+  const of = new THREE.Group(); of.position.set(0, 5.2, -6.3); s.add(of); G.office = of; of.visible = false;
+  const ob = box(14, 2.6, 2.4, mat(0xe6e2d8)); ob.position.y = 1.3; of.add(ob);
+  const og = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 1.4), new THREE.MeshStandardMaterial({ color: 0x8fb4c8, metalness: 0.6, roughness: 0.1, emissive: 0xffd98a, emissiveIntensity: 0.15 })); og.position.set(0, 1.4, 1.21); of.add(og); CITY.windowsMats.push(og.material);
+  const orf = box(14.4, 0.2, 2.8, mat(0x3b4148)); orf.position.y = 2.7; of.add(orf);
+  // cam vitrin + kanopi (kademe 2+)
+  const cp = new THREE.Group(); cp.position.set(0, 0, 6.2); s.add(cp); G.canopy = cp; cp.visible = false;
+  G.canopyMat = mat(0xff8a1f, { metalness: 0.3 });
+  const cr = box(26.6, 0.18, 1.8, G.canopyMat); cr.position.set(0, 4.05, 0.3); cp.add(cr);
+  for (let i = 0; i < 5; i++) { const lt = box(0.8, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })); lt.position.set(-10 + i * 5, 3.95, 0.6); cp.add(lt); }
+  // merkez plaza kulesi (kademe 4)
+  const hq = new THREE.Group(); hq.position.set(4, 0, -16.5); s.add(hq); G.hq = hq; hq.visible = false;
+  const tex = windowTexture('#2b3a4a', 0.6); tex.repeat.set(4, 9);
+  const hm = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0, metalness: 0.4, roughness: 0.3 }); CITY.windowsMats.push(hm);
+  const tw = new THREE.Mesh(new THREE.BoxGeometry(11, 30, 6), [hm, hm, mat(0x3b4148), hm, hm, hm]); tw.position.y = 15; tw.castShadow = true; hq.add(tw);
+  G.hqSignMat = new THREE.MeshBasicMaterial({ map: labelTexture('GARAGE ZERO') });
+  const hs = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.6), G.hqSignMat); hs.position.set(0, 28.5, 3.02); hq.add(hs);
+  const crown = box(11.6, 0.6, 6.6, G.canopyMat); crown.position.y = 30.3; hq.add(crown);
+}
+function syncCompany() {
+  if (!G.truckHall || !S) return;
+  const C = S.custom || DEFAULT_CUSTOM, tier = S.tier || 0;
+  G.truckHall.visible = !!S.truckHall;
+  if (CITY.washBld) CITY.washBld.visible = !S.truckHall;
+  if (CITY.sideBld) CITY.sideBld.visible = !S.truckHall;
+  G.office.visible = tier >= 1; G.canopy.visible = tier >= 2; G.hq.visible = tier >= 4;
+  G.canopyMat.color.set(C.accent);
+  const nm = S.name.toUpperCase().slice(0, 18), key = nm + C.accent;
+  if (G.hqSignMat.userData.k !== key) { G.hqSignMat.map = labelTexture([nm, 'HOLDİNG'], { accent: C.accent }); G.hqSignMat.needsUpdate = true; G.hqSignMat.userData.k = key; G.truckSignMat.map = labelTexture([nm, 'TIR SERVİSİ'], { accent: C.accent }); G.truckSignMat.needsUpdate = true; }
+  // şubeler: karşı sıradaki dükkân tabelalarını devral
+  CITY.shopFronts.forEach((b, i) => {
+    const br = (S.branches || []).find(x => x.bld === i), u = b.userData; if (!u.sign) return;
+    const want = br ? 'br' + nm + br.district + C.accent : 'def';
+    if (u.signKey === want) return;
+    u.signKey = want;
+    u.sign.material.map = br ? shopSignTexture(nm.slice(0, 12), C.accent, '#1a1206') : shopSignTexture(u.signDef[0], u.signDef[1], u.signDef[2]);
+    u.sign.material.needsUpdate = true;
+    u.awn.material = br ? new THREE.MeshStandardMaterial({ color: C.accent }) : cmat(new THREE.Color(u.signDef[1]).getHex());
+  });
+}
 // ================= GARAGE ZERO — ARAYÜZ =================
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
@@ -3000,7 +3274,7 @@ const PREFS = (() => { try { return Object.assign({ autoPause: false, camSens: 1
 function savePrefs() { try { localStorage.setItem('gz_prefs', JSON.stringify(PREFS)); } catch (e) { } }
 
 const UI = {
-  selected: null, panel: null, carTab: 'info', tagEls: {}, hotEls: {}, started: false, ptab: { jobs: 'door', gallery: 'stock', biz: 'profile' },
+  selected: null, panel: null, carTab: 'info', tagEls: {}, hotEls: {}, started: false, ptab: { jobs: 'door', gallery: 'stock', biz: 'profile', corp: 'tier' },
   busy: false, work: null, inspect: null, haggle: null,
 
   init() {
@@ -3063,6 +3337,7 @@ const UI = {
     ['reviews', 'pendingReviews', 'goals', 'history', 'loans', 'warranty'].forEach(k => S[k] = S[k] || []); S.laborRate = S.laborRate || 2500; S.adUntil = S.adUntil || 0; if (!S.goals.length) genGoals();
     S.cfg = S.cfg || Object.assign({}, DIFFICULTY.normal); S.custom = Object.assign({}, DEFAULT_CUSTOM, S.custom || {});
     S.staff.forEach(w => { if (w.role === 'usta' && !w.spec) w.spec = 'genel'; });
+    S.tier = S.tier || 0; ['branches', 'contracts', 'contractOffers'].forEach(k => S[k] = S[k] || []);
     S.ach = S.ach || {}; S.weather = S.weather || 'sunny'; S.forecast = S.forecast || 'sunny';
     S.staff.forEach(w => { if (w.energy == null) w.energy = 100; if (w.morale == null) w.morale = 70; });
     S.cars.concat(S.jobs).forEach(c => { c._noAnim = true; c._custSpawned = false; });
@@ -3145,6 +3420,13 @@ const UI = {
       case 'autoOrd': { S.autoOrder = S.autoOrder || {}; const seq = [0, 1, 2, 3, 5], cur = S.autoOrder[d.f] || 0; const nx = seq[(seq.indexOf(cur) + 1) % seq.length]; if (nx) S.autoOrder[d.f] = nx; else delete S.autoOrder[d.f]; UI.render(); break; }
       case 'bid': bidAuction(id, $('#bid_' + id).value); break;
       case 'cam': UI.camNext(); break;
+      case 'tierUp': upgradeTier(); break;
+      case 'truckHall': UI.modal('Tır servisi kurulsun mu?', `<p>${fmt(TRUCK_HALL_COST)} ödeyerek şehrin batısında 2 kanallı ağır vasıta servisi açarsın. Kanallara usta atamayı unutma.</p>`, [{ t: 'Vazgeç' }, { t: 'Kur', cls: 'pri', fn: buyTruckHall }]); break;
+      case 'brBuy': buyBranch(+d.i); break;
+      case 'brUp': upgradeBranch(id); break;
+      case 'brMgr': trainBranchMgr(id); break;
+      case 'brSell': UI.modal('Şube satılsın mı?', '<p>Yatırımın yaklaşık %70’ini geri alırsın.</p>', [{ t: 'Vazgeç' }, { t: 'Sat', cls: 'pri', fn: () => sellBranch(id) }]); break;
+      case 'conOk': acceptContract(id); break;
       case 'mbtn': { const b = UI.mBtns[+d.i]; UI.closeModal(); b && b.fn && b.fn(); break; }
       case 'hAccept': haggleAccept(); break;
       case 'hCounter': haggleCounter($('#hPrice').value); break;
@@ -3226,17 +3508,19 @@ const UI = {
     if ($('#hRepBar').innerHTML !== rb) $('#hRepBar').innerHTML = rb;
     $('#hLvlV').textContent = lvl() + ' · ' + (S.xp % 400) + '/400';
     const nj = S.jobs.length + S.appReq.length; $('#bJobs').hidden = !nj; $('#bJobs').textContent = nj;
-    const noUsta = S.lic.servis ? [...Array(S.bays).keys()].filter(i => !S.staff.some(w => w.role === 'usta' && w.bay === i)).length : 0;
+    const noUsta = S.lic.servis ? allBays().filter(i => !S.staff.some(w => w.role === 'usta' && w.bay === i)).length : 0;
     $('#bStaff').hidden = !noUsta; $('#bStaff').textContent = '!';
     const fails = S.errands.filter(e => e.status === 'fail').length; $('#bDepot').hidden = !fails; $('#bDepot').textContent = fails;
     $('#dGallery').hidden = !S.lic.galeri && !S.cars.some(c => c.owner === 'me');
     $('#dStaff').hidden = $('#dDepot').hidden = !S.lic.servis;
+    const nx = TIERS[(S.tier || 0) + 1], tierReady = nx && tierReqs((S.tier || 0) + 1).every(r => r.ok);
+    $('#bCorp').hidden = !(tierReady || (S.contractOffers || []).length); $('#bCorp').textContent = tierReady ? '↑' : (S.contractOffers || []).length;
     document.querySelectorAll('#spd button[data-v]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === S.speed));
     const sb = $('#sndBtn'); if (sb) { const on = S.settings.sound !== false; sb.setAttribute('aria-pressed', 'false'); sb.style.opacity = on ? 1 : 0.45; $('#sndWave').style.display = on ? '' : 'none'; }
     const now = performance.now(); if (now - (UI._lu || 0) > 400) { UI._lu = now; UI.updateLifts(); }
   },
   carMeta(c) {
-    const loc = c.out ? 'Dış serviste' : c.bay != null ? `Lift ${c.bay + 1}` : c.lot != null ? `Park P${c.lot + 1}` : c.apron != null ? 'Kapıda bekliyor' : '';
+    const loc = c.out ? 'Dış serviste' : c.bay != null ? bayName(c.bay) : c.lot != null ? `Park P${c.lot + 1}` : c.apron != null ? 'Kapıda bekliyor' : '';
     return `${c.year} · ${c.km.toLocaleString('tr-TR')} km · Boya %${c.paint}${loc ? ' · ' + loc : ''}`;
   },
 
@@ -3361,7 +3645,7 @@ const UI = {
     const queued = tasksFor(c.id);
     const qOf = pred => queued.some(x => pred(x.t));
     let h = '';
-    if (!w) h += `<div class="note">${c.bay != null ? `Lift ${c.bay + 1}’e atanmış usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
+    if (!w) h += `<div class="note">${c.bay != null ? `${bayName(c.bay)}’e atanmış usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
     if (I.view === 'general') {
       h += `<h3>Genel</h3>${c.owner === 'customer' ? `<ul class="complaint">${c.sym.map(s => `<li>${SYM[s]}</li>`).join('')}</ul>` : ''}<div class="acts">`;
       h += `<button class="btn ${c.findings.overview ? '' : 'pri'}" data-act="overview" ${qOf(t => t.type === 'overview') ? 'disabled' : ''}>Ustaya genel kontrol yaptır<span>${OVERVIEW_MIN} dk · ${w ? stars(w.skill) : '—'}</span></button>`;
@@ -3417,7 +3701,7 @@ const UI = {
     $('#iNotes').textContent = `Not ${Object.keys(c.findings).length}`;
     const queued = tasksFor(c.id), qOf = pred => queued.some(x => pred(x.t));
     let h = '';
-    if (!w) h += `<div class="note">${c.bay != null ? `Lift ${c.bay + 1}’de usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
+    if (!w) h += `<div class="note">${c.bay != null ? `${bayName(c.bay)}’de usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
     if (I.view === 'general') {
       if (c.owner === 'customer') h += `<div class="ctxt">${c.sym.map(s => SYM[s]).join(' · ')}</div>`;
       h += `<div class="gridb">`;
@@ -3507,10 +3791,10 @@ const UI = {
     if (tab === 'door') {
       h += S.jobs.length ? `<div class="list">${S.jobs.map(c => {
         const left = c.cust.deadline - S.day;
-        return `<div class="card"><div class="row sp"><span class="title">${MODELS[c.model].name}</span><span class="row">${c.regular ? '<span class="chip ok">Sadık müşteri</span>' : ''}${c.fleet ? '<span class="chip acc">Filo</span>' : ''}${(c.modReq || []).length ? '<span class="chip info">Modifiye</span>' : ''}${c.warranty ? '<span class="chip bad">Garanti</span>' : ''}${c.tow ? '<span class="chip warn">Çekiciyle</span>' : ''}${c.appt ? '<span class="chip ok">Randevulu</span>' : ''}<span class="chip ${left <= 0 ? 'bad' : ''}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün'}</span></span></div>
+        return `<div class="card"><div class="row sp"><span class="title">${MODELS[c.model].name}</span><span class="row">${c.truck ? '<span class="chip warn">Tır</span>' : ''}${c.contract ? '<span class="chip acc">Sözleşmeli</span>' : ''}${c.regular ? '<span class="chip ok">Sadık müşteri</span>' : ''}${c.fleet ? '<span class="chip acc">Filo</span>' : ''}${(c.modReq || []).length ? '<span class="chip info">Modifiye</span>' : ''}${c.warranty ? '<span class="chip bad">Garanti</span>' : ''}${c.tow ? '<span class="chip warn">Çekiciyle</span>' : ''}${c.appt ? '<span class="chip ok">Randevulu</span>' : ''}<span class="chip ${left <= 0 ? 'bad' : ''}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün'}</span></span></div>
           <span class="meta">${esc(c.cust.name)} · ${c.year} · ${c.km.toLocaleString('tr-TR')} km · ${c.leaveAt ? Math.max(0, Math.round(c.leaveAt - S.minute)) + ' dk sabır' : ''}</span>
           <ul class="complaint">${c.sym.map(s => `<li>${SYM[s]}</li>`).join('')}</ul>
-          <div class="btns"><button class="btn sm" data-act="reject" data-id="${c.id}">Reddet</button><button class="btn sm pri" data-act="accept" data-id="${c.id}" ${freeBay() < 0 ? 'disabled' : ''}>${freeBay() < 0 ? 'Lift dolu' : 'Kabul et'}</button></div></div>`;
+          <div class="btns"><button class="btn sm" data-act="reject" data-id="${c.id}">Reddet</button><button class="btn sm pri" data-act="accept" data-id="${c.id}" ${(c.truck ? freeTruckBay() : freeBay()) < 0 ? 'disabled' : ''}>${(c.truck ? freeTruckBay() : freeBay()) < 0 ? (c.truck ? 'Kanal dolu' : 'Lift dolu') : 'Kabul et'}</button></div></div>`;
       }).join('')}</div>` : `<div class="note">Şu an kapıda müşteri yok. Gün içinde müşteriler gelir, telefonla randevu da isterler.</div>`;
     }
     if (tab === 'appt') {
@@ -3525,9 +3809,9 @@ const UI = {
       h += `<p class="muted">Randevulu müşteri daha sabırlıdır ve iyi iş çıkarırsan ekstra itibar verir. Kapıda geri çevirirsen itibar kaybedersin.</p>`;
     }
     if (tab === 'lifts') {
-      h += `<div class="list">${[...Array(S.bays).keys()].map(i => {
+      h += `<div class="list">${allBays().map(i => {
         const car = S.cars.find(c => c.bay === i), u = S.staff.find(w => w.role === 'usta' && w.bay === i), ci = S.staff.find(w => w.role === 'cirak' && w.bay === i);
-        return `<div class="card"><div class="row sp"><span class="title">Lift ${i + 1}</span><span class="meta">${u ? wname(u) + ' ' + stars(u.skill) : '<span class="bad">usta yok</span>'}${ci ? ' · ' + wname(ci) : ''}</span></div>
+        return `<div class="card"><div class="row sp"><span class="title">${bayName(i)}</span><span class="meta">${u ? wname(u) + ' ' + stars(u.skill) : '<span class="bad">usta yok</span>'}${ci ? ' · ' + wname(ci) : ''}</span></div>
           ${car ? `<span class="meta">${MODELS[car.model].name}${car.owner === 'customer' ? ' · ' + esc(car.cust.name) + (car.cust.deadline <= S.day ? ' · <span class="bad">bugün teslim</span>' : '') : ' · stok aracı'} · ${Object.keys(car.findings).length} not · ${tasksFor(car.id).length} iş sırada</span><button class="btn sm" data-act="open" data-id="${car.id}">Aç</button>` : '<span class="meta">Boş</span>'}</div>`;
       }).join('')}</div>`;
     }
@@ -3563,7 +3847,7 @@ const UI = {
   },
   view_staff() {
     const wages = S.staff.reduce((s, w) => s + w.wage, 0);
-    const bayBtns = w => `<div class="btns">${[...Array(S.bays).keys()].map(i => `<button class="btn sm ${w.bay === i ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="${i}">Lift ${i + 1}</button>`).join('')}<button class="btn sm ${w.bay == null ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="">Serbest</button></div>`;
+    const bayBtns = w => `<div class="btns">${allBays().map(i => `<button class="btn sm ${w.bay === i ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="${i}">${i >= 4 ? 'Tır ' + (i - 3) : 'Lift ' + (i + 1)}</button>`).join('')}<button class="btn sm ${w.bay == null ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="">Serbest</button></div>`;
     let h = `<div class="sec">Ekibin · günlük ${fmt(wages)}</div>`;
     h += S.staff.length ? `<div class="list">${S.staff.map(w => {
       const cur = w.queue[0], er = w.errand && S.errands.find(e => e.id === w.errand);
@@ -3597,6 +3881,45 @@ const UI = {
     });
     h += `</div><p class="muted">“Oto” düğmesi en az stok sayısını ayarlar (0→1→2→3→5): gün sonunda eksik kalan parçalar toptancıdan otomatik tamamlanır. Çırağı ya da kuryeyi yedek parçacıya gönderebilirsin; bazen parça çıkmaz, başka yere yollarsın. Toptancı en ucuzudur ama ertesi sabah gelir.</p>`;
     return { title: 'Depo', sub: `${Object.values(S.stock).reduce((a, b) => a + b, 0)} parça stokta`, html: h };
+  },
+  view_corp() {
+    const tab = UI.ptab.corp || 'tier', tier = S.tier || 0;
+    const tabs = UI.tabsHtml('corp', [['tier', 'Kademe'], ['fac', 'Tesisler'], ['br', `Şubeler ${(S.branches || []).length}/${BRANCH_LIMIT[tier]}`], ['con', `Sözleşmeler ${(S.contracts || []).length}`]]);
+    let h = '';
+    if (tab === 'tier') {
+      h += `<div class="ladder">${TIERS.map((T, i) => `<div class="rung ${i < tier ? 'past' : i === tier ? 'now' : ''}"><span class="rn">${i + 1}</span><div><b>${T.name}</b><div class="meta">${T.perks.join(' · ')}</div></div></div>`).join('')}</div>`;
+      const nx = TIERS[tier + 1];
+      if (nx) {
+        const reqs = tierReqs(tier + 1), ok = reqs.every(r => r.ok);
+        h += `<div class="sec">Sonraki kademe: ${nx.name}</div><div class="card">${reqs.map(r => `<div class="row sp"><span>${r.ok ? '✓' : '○'} ${r.t}</span><span class="mono ${r.ok ? 'ok' : 'muted'}">${r.v}</span></div>`).join('')}
+          <button class="btn ${ok ? 'pri' : ''}" data-act="tierUp" ${ok ? '' : 'disabled'}>${ok ? `Büyü · ${fmt(nx.req.cash)}` : 'Koşullar tamamlanınca açılır'}</button></div>`;
+      } else h += `<div class="note">En üst kademedesin: ${TIERS[tier].name}. Şehrin en büyük oto servis holdingi sensin.</div>`;
+    }
+    if (tab === 'fac') {
+      h += `<div class="card"><div class="row sp"><span class="title">Tır Servisi</span>${S.truckHall ? '<span class="chip ok">Açık</span>' : `<span class="price" style="font-size:18px">${fmt(TRUCK_HALL_COST)}</span>`}</div>
+        <span class="meta">Şehrin batısında 2 kanallı ağır vasıta binası. Tırların faturası parça ×${TRUCK_PART_MUL}, işçilik ×${TRUCK_LABOR_MUL}. Her parça değişimi depodan ${TRUCK_STOCK} adet harcar. Kanallara ayrı usta ata.</span>
+        ${S.truckHall ? '' : `<button class="btn sm ${tier >= 2 ? 'pri' : ''}" data-act="truckHall" ${tier >= 2 ? '' : 'disabled'}>${tier >= 2 ? 'Tır servisini kur' : '“Profesyonel Servis” kademesi gerekli'}</button>`}</div>
+        <div class="card"><div class="row sp"><span class="title">Ofis katı</span><span class="chip ${tier >= 1 ? 'ok' : ''}">${tier >= 1 ? 'Var' : 'Kademe 2'}</span></div><span class="meta">Atölyenin üstüne idari ofis. Her gün +1 müşteri ve sözleşme teklifleri.</span></div>
+        <div class="card"><div class="row sp"><span class="title">Cam vitrin ve ışıklı kanopi</span><span class="chip ${tier >= 2 ? 'ok' : ''}">${tier >= 2 ? 'Var' : 'Kademe 3'}</span></div><span class="meta">Dükkân cephesine vurgu renginde ışıklı saçak.</span></div>
+        <div class="card"><div class="row sp"><span class="title">Merkez plaza kulesi</span><span class="chip ${tier >= 4 ? 'ok' : ''}">${tier >= 4 ? 'Var' : 'Kademe 5'}</span></div><span class="meta">Atölyenin arkasında şirket adını taşıyan 30 m’lik kule. Tüm şubeler +%20 kâr.</span></div>`;
+    }
+    if (tab === 'br') {
+      const lim = BRANCH_LIMIT[tier], brs = S.branches || [];
+      h += `<p class="muted">Şubeler kendi müdürleriyle çalışır ve her gün sonunda kâr (bazen zarar) getirir. Açtığın şube, yolun karşısındaki dükkânlardan birinin tabelasında senin adınla görünür.</p>`;
+      if (brs.length) h += `<div class="list">${brs.map(b => `<div class="card"><div class="row sp"><span class="title">${b.district}</span><span class="chip">Seviye ${b.level}</span></div>
+        <span class="meta">Müdür ${stars(b.mgr)} · dün ${fmt(b.last)} · toplam ${fmt(b.total)}</span>
+        <div class="btns">${b.level < 3 ? `<button class="btn sm" data-act="brUp" data-id="${b.id}">Büyüt · ${fmt(BRANCH_UPGRADE[b.level])}</button>` : ''}${b.mgr < 5 ? `<button class="btn sm" data-act="brMgr" data-id="${b.id}">Müdür eğitimi · ${fmt(40000 * b.mgr)}</button>` : ''}<button class="btn sm ghost" data-act="brSell" data-id="${b.id}">Sat</button></div></div>`).join('')}</div>`;
+      h += `<div class="sec">Şube açılabilecek semtler</div>`;
+      h += lim ? `<div class="list">${DISTRICTS.map((D, i) => brs.some(b => b.district === D.name) ? '' : `<div class="card"><div class="row sp"><span class="title">${D.name}</span><span class="price" style="font-size:18px">${fmt(D.cost)}</span></div><span class="meta">Tahmini günlük kâr ~${fmt(D.base)}</span><button class="btn sm ${brs.length < lim ? 'pri' : ''}" data-act="brBuy" data-i="${i}" ${brs.length < lim ? '' : 'disabled'}>${brs.length < lim ? 'Şube aç' : 'Kademe sınırı dolu'}</button></div>`).join('')}</div>` : '<div class="note">İlk şube “Profesyonel Servis” kademesinde açılır.</div>';
+    }
+    if (tab === 'con') {
+      const cs = S.contracts || [], of = S.contractOffers || [];
+      h += `<p class="muted">Sözleşmeli şirketler gün içinde araç gönderir ve faturayı katsayıyla öder. Zamanında teslim etmezsen ya da arızayı çözemezsen ihlal sayılır; 3 ihlalde sözleşme bozulur. Kusursuz biten sözleşme prim verir.</p>`;
+      if (cs.length) h += `<div class="sec">Aktif</div><div class="list">${cs.map(k => `<div class="card"><div class="row sp"><span class="title">${k.company}</span><span class="chip ${k.strikes ? 'bad' : 'ok'}">${k.strikes} ihlal</span></div><span class="meta">${k.truck ? 'Tır' : 'Otomobil'} · günlük %${Math.round(k.perDay * 100)} ihtimalle araç · fatura ×${k.payMul.toFixed(2).replace('.', ',')} · Gün ${k.until}’e kadar · ${k.done} iş</span></div>`).join('')}</div>`;
+      h += `<div class="sec">Teklifler</div>`;
+      h += tier < 1 ? '<div class="note">Sözleşme teklifleri “Oto Servis” kademesinde gelmeye başlar.</div>' : of.length ? `<div class="list">${of.map(o => `<div class="card"><div class="row sp"><span class="title">${o.company}</span><span class="chip acc">×${o.payMul.toFixed(2).replace('.', ',')}</span></div><span class="meta">${o.truck ? 'Tır' : 'Otomobil'} · ${o.days} gün · günlük %${Math.round(o.perDay * 100)} ihtimalle araç</span><button class="btn sm pri" data-act="conOk" data-id="${o.id}">İmzala</button></div>`).join('')}</div>` : '<div class="note">Şu an yeni teklif yok; birkaç gün içinde gelir.</div>';
+    }
+    return { title: 'Şirket', sub: TIERS[tier].name, tabs, html: h };
   },
   view_shop() {
     const item = (name, desc, cost, owned, k, key, lockMsg) => `<div class="card"><div class="row sp"><span class="title">${name}</span>${owned ? '<span class="chip ok">Sahipsin</span>' : `<span class="price" style="font-size:18px">${fmt(cost)}</span>`}</div>
@@ -3746,11 +4069,11 @@ const UI = {
     if (UI.inspect || !S.lic.servis) { el.hidden = true; return; }
     el.hidden = false;
     const chips = [];
-    for (let i = 0; i < S.bays; i++) {
+    for (const i of allBays()) {
       const car = S.cars.find(c => c.bay === i), u = S.staff.find(w => w.role === 'usta' && w.bay === i);
       const q = car ? tasksFor(car.id) : [], cur = q.find(x => x.w.queue[0] === x.t);
       const st = !car ? 'empty' : cur ? 'work' : car.owner === 'customer' && car.cust.deadline <= S.day ? 'due' : 'idle';
-      chips.push(`<button class="lift ${st}" data-act="${car ? 'open' : 'liftEmpty'}" data-id="${car ? car.id : ''}"><b>L${i + 1}</b><span>${car ? MODELS[car.model].name : 'Boş lift'}</span><small>${u ? u.name + ' ' + '★'.repeat(u.skill) + (u.spec && u.spec !== 'genel' ? ' · ' + SPECS[u.spec].name : '') : 'usta yok'}${cur ? ' · çalışıyor' : q.length ? ' · ' + q.length + ' iş' : ''}</small></button>`);
+      chips.push(`<button class="lift ${st}" data-act="${car ? 'open' : 'liftEmpty'}" data-id="${car ? car.id : ''}"><b>${i >= 4 ? 'T' + (i - 3) : 'L' + (i + 1)}</b><span>${car ? MODELS[car.model].name : i >= 4 ? 'Boş tır kanalı' : 'Boş lift'}</span><small>${u ? u.name + ' ' + '★'.repeat(u.skill) + (u.spec && u.spec !== 'genel' ? ' · ' + SPECS[u.spec].name : '') : 'usta yok'}${cur ? ' · çalışıyor' : q.length ? ' · ' + q.length + ' iş' : ''}</small></button>`);
     }
     if (S.jobs.length) chips.push(`<button class="lift wait" data-act="panel" data-p="jobs"><b>${S.jobs.length}</b><span>Kapıda bekliyor</span><small>kabul / ret</small></button>`);
     const sig = chips.join('');
@@ -3801,7 +4124,7 @@ const UI = {
     const I = UI.inspect, wrap = $('#hots');
     if (!I || I.view === 'general') { if (wrap.childElementCount) { wrap.innerHTML = ''; UI.hotEls = {}; } return; }
     const c = carById(I.id), m = G.carMeshes[I.id]; if (!c || !m) return;
-    const ready = I.view === 'hood' ? m.userData.hoodT > 0.7 : m.userData.y > 1.2;
+    const ready = I.view === 'hood' ? m.userData.hoodT > 0.7 : (m.userData.y > 1.2 || m.userData.info.truck);
     const W = window.innerWidth, H = window.innerHeight;
     Object.entries(COMPS).forEach(([k, C]) => {
       if (C.view !== I.view) return;

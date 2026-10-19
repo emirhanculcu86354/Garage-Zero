@@ -134,7 +134,7 @@ function syncWorkers() {
   });
 }
 function workerHome(w) {
-  if (w.bay != null && w.bay < S.bays) return [BAY_X[w.bay] + (w.role === 'usta' ? 2.2 : -2.2), BAY_Z + 2.4];
+  if (w.bay != null && (w.bay < S.bays || (w.bay >= 4 && S.truckHall))) { const p = bayPos(w.bay); return [p.x + (w.role === 'usta' ? (w.bay >= 4 ? 2.4 : 2.2) : -2.2), p.z + (w.bay >= 4 ? 4.6 : 2.4)]; }
   const i = S.staff.indexOf(w);
   return [-1 + (i % 5) * 1.1, -5.6];
 }

@@ -1,6 +1,9 @@
 // ================= GARAGE ZERO — 3D SAHNE =================
 const BAY_X = [-9, -3, 3, 9];
 const BAY_Z = -1.2;
+const TRUCK_BAYS = [[-45.5, -3.6], [-37.5, -3.6]];
+const TRUCK_WAIT = { x: -41.5, z: 7.2 };
+function bayPos(i) { return i >= 4 ? { x: TRUCK_BAYS[i - 4][0], z: TRUCK_BAYS[i - 4][1] } : { x: BAY_X[i], z: BAY_Z }; }
 const LOT_X = [17.5, 20.5, 23.5, 26.5, 29.5, 32.5, 35.5, 38.5];
 const LOT_Z = 4.5;
 
@@ -59,6 +62,7 @@ function initScene() {
 
   initStaff();
   buildExtras();
+  buildCompanyStructures();
   applyGfx();
   spawnPedestrians(window.innerWidth < 800 ? 5 : 9);
   bindCameraInput(canvas);
@@ -176,8 +180,9 @@ function makeLotSlot(x, i) {
 // ---------- araç yerleşimi & sürüş ----------
 function carSlot(car) {
   if (car.out) return null;
-  if (car.bay != null) return { key: 'b' + car.bay, x: BAY_X[car.bay], z: BAY_Z };
+  if (car.bay != null) { const p = bayPos(car.bay); return { key: 'b' + car.bay, x: p.x, z: p.z }; }
   if (car.lot != null) return { key: 'l' + car.lot, x: LOT_X[car.lot], z: LOT_Z };
+  if (car.apron === 10) return { key: 'a10', x: TRUCK_WAIT.x, z: TRUCK_WAIT.z };
   if (car.apron != null) return { key: 'a' + car.apron, x: WAIT_X[car.apron], z: APRON_Z };
   return null;
 }
@@ -213,7 +218,7 @@ function syncScene() {
       driveCar(m, routeTo(m.position, slot), 7, () => { if (car.apron != null && car.owner === 'customer' && !car._custSpawned) Life.customerArrived(car); });
       m.userData.slotKey = slot.key;
     }
-    m.userData.tY = car.bay != null && car.lifted ? 1.55 : 0;
+    m.userData.tY = car.bay != null && car.bay < 4 && car.lifted ? 1.55 : 0;
     m.userData.tHood = car.hoodOpen ? 1 : 0;
   });
   Object.keys(G.carMeshes).forEach(id => {
@@ -228,6 +233,7 @@ function syncScene() {
   });
   G.lotMarks.forEach((m, i) => { m.visible = i < S.lot; });
   if (G.booth) G.booth.visible = !!S.up.paint;
+  syncCompany();
   if (G.lounge) G.lounge.visible = !!S.up.lounge;
   if (G.tireMach) G.tireMach.visible = !!S.up.tireMachine;
   if (G.bodyBench) G.bodyBench.visible = !!S.up.bodyShop;
@@ -286,10 +292,17 @@ function focusCar(id, view) {
   if (!p) return;
   const h = m ? m.rotation.y : Math.PI;
   const c = G.cam;
-  if (view === 'hood' && m) {
+  if (view === 'hood' && m && m.userData.info.truck) {
+    const I = m.userData.info;
+    c.tTarget.copy(m.localToWorld(new THREE.Vector3(0, I.yT + 0.2, I.f0 + I.hoodLen * 0.5)));
+    c.tYaw = h + 0.95; c.tPitch = 0.9; c.tDist = 5.6; c.minP = 0.1; c.maxP = 1.4;
+  } else if (view === 'hood' && m) {
     const I = m.userData.info;
     c.tTarget.copy(m.localToWorld(new THREE.Vector3(0, I.yT + 0.15, I.f0 + I.hoodLen * 0.5)));
     c.tYaw = h + 0.25; c.tPitch = 0.8; c.tDist = window.innerWidth <= 760 ? 3.1 : 3.6; c.minP = 0.1; c.maxP = 1.4;
+  } else if (view === 'under' && m && m.userData.info.truck) {
+    c.tTarget.copy(m.position).add(new THREE.Vector3(0, 0.55, 0));
+    c.tYaw = h + Math.PI / 2 + 0.3; c.tPitch = -0.12; c.tDist = 4.6; c.minP = -0.4; c.maxP = 0.8;
   } else if (view === 'under' && m) {
     c.tTarget.copy(m.position).add(new THREE.Vector3(0, 1.45, 0));
     c.tYaw = h + Math.PI / 2 + 0.35; c.tPitch = -0.42; c.tDist = 3.6; c.minP = -0.75; c.maxP = 0.6;
@@ -387,7 +400,7 @@ function loop() {
       u.wheels.forEach(w => w.rotation.x += step / u.info.r);
     }
     u.y += ((u.tY || 0) - u.y) * k * 0.5; m.position.y = u.y;
-    u.hoodT += ((u.tHood || 0) - u.hoodT) * k; u.hoodPivot.rotation.x = -1.15 * u.hoodT;
+    u.hoodT += ((u.tHood || 0) - u.hoodT) * k; u.hoodPivot.rotation.x = (u.hoodAng || -1.15) * u.hoodT;
     if (u.engineBay) u.engineBay.visible = u.hoodT > 0.08;
   });
   G.bays.forEach(b => { b.liftY += (b.tLiftY - b.liftY) * k * 0.5; b.arms.position.y = b.liftY; });
@@ -539,4 +552,66 @@ function applyCustom() {
   G.bays.forEach(b => b.postM.color.set(C.lift));
   if (G.ring) G.ring.material.color.set(C.accent);
   syncScene();
+}
+
+// ---------- şirket yapıları ----------
+function buildCompanyStructures() {
+  const s = G.scene;
+  // tır servisi
+  const th = new THREE.Group(); th.position.set(-41.5, 0, -4); s.add(th); G.truckHall = th; th.visible = false;
+  const wallM = mat(0x5b6168), trimM = mat(0x2b2f34), roofM = mat(0x4b5158, { metalness: 0.4 });
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(18, 14), mat(0x4a4f55, { roughness: 0.6 })); fl.rotation.x = -Math.PI / 2; fl.position.set(0, 0.03, 0); fl.receiveShadow = true; th.add(fl);
+  const back = box(18.4, 6.5, 0.4, wallM); back.position.set(0, 3.25, -7); th.add(back);
+  [-9, 9].forEach(x => { const w = box(0.4, 6.5, 14, wallM); w.position.set(x, 3.25, 0); th.add(w); });
+  const band = box(18.6, 1.4, 0.5, trimM); band.position.set(0, 5.9, 7); th.add(band);
+  [-9, 0, 9].forEach(x => { const col = box(0.6, 6.5, 0.6, trimM); col.position.set(x, 3.25, 7); th.add(col); });
+  for (let i = 0; i < 6; i++) { const b = box(18.2, 0.2, 0.25, roofM); b.position.set(0, 6.4, -6 + i * 2.5); th.add(b); }
+  G.truckSignMat = new THREE.MeshBasicMaterial({ map: labelTexture(['TIR SERVİSİ', 'AĞIR VASITA']) });
+  const sg = new THREE.Mesh(new THREE.PlaneGeometry(8, 1.2), G.truckSignMat); sg.position.set(0, 5.9, 7.27); th.add(sg);
+  TRUCK_BAYS.forEach(([bx]) => {
+    const pit = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 8.5), new THREE.MeshBasicMaterial({ color: 0x15181b })); pit.rotation.x = -Math.PI / 2; pit.position.set(bx + 41.5, 0.035, 0.4); th.add(pit);
+    [-0.85, 0.85].forEach(o => { const e = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 8.5), new THREE.MeshBasicMaterial({ color: 0xf2c14e })); e.rotation.x = -Math.PI / 2; e.position.set(bx + 41.5 + o, 0.04, 0.4); th.add(e); });
+    const lamp = box(0.3, 0.06, 6, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xeaf2ff, emissiveIntensity: 1.1 })); lamp.position.set(bx + 41.5, 6.2, 0); th.add(lamp);
+  });
+  const rack = box(1, 2.4, 4, mat(0xb8322a, { metalness: 0.3 })); rack.position.set(-8.2, 1.2, -3.5); th.add(rack);
+  const tires = []; for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(0.55, 0.22, 8, 18), mat(0x161616)); t.position.set(7.8, 0.6 + i * 0.01, -5 + i * 1.3); t.rotation.y = Math.PI / 2; th.add(t); tires.push(t); }
+  // ofis katı (kademe 1+)
+  const of = new THREE.Group(); of.position.set(0, 5.2, -6.3); s.add(of); G.office = of; of.visible = false;
+  const ob = box(14, 2.6, 2.4, mat(0xe6e2d8)); ob.position.y = 1.3; of.add(ob);
+  const og = new THREE.Mesh(new THREE.PlaneGeometry(12.6, 1.4), new THREE.MeshStandardMaterial({ color: 0x8fb4c8, metalness: 0.6, roughness: 0.1, emissive: 0xffd98a, emissiveIntensity: 0.15 })); og.position.set(0, 1.4, 1.21); of.add(og); CITY.windowsMats.push(og.material);
+  const orf = box(14.4, 0.2, 2.8, mat(0x3b4148)); orf.position.y = 2.7; of.add(orf);
+  // cam vitrin + kanopi (kademe 2+)
+  const cp = new THREE.Group(); cp.position.set(0, 0, 6.2); s.add(cp); G.canopy = cp; cp.visible = false;
+  G.canopyMat = mat(0xff8a1f, { metalness: 0.3 });
+  const cr = box(26.6, 0.18, 1.8, G.canopyMat); cr.position.set(0, 4.05, 0.3); cp.add(cr);
+  for (let i = 0; i < 5; i++) { const lt = box(0.8, 0.05, 0.3, new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.9 })); lt.position.set(-10 + i * 5, 3.95, 0.6); cp.add(lt); }
+  // merkez plaza kulesi (kademe 4)
+  const hq = new THREE.Group(); hq.position.set(4, 0, -16.5); s.add(hq); G.hq = hq; hq.visible = false;
+  const tex = windowTexture('#2b3a4a', 0.6); tex.repeat.set(4, 9);
+  const hm = new THREE.MeshStandardMaterial({ map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 0, metalness: 0.4, roughness: 0.3 }); CITY.windowsMats.push(hm);
+  const tw = new THREE.Mesh(new THREE.BoxGeometry(11, 30, 6), [hm, hm, mat(0x3b4148), hm, hm, hm]); tw.position.y = 15; tw.castShadow = true; hq.add(tw);
+  G.hqSignMat = new THREE.MeshBasicMaterial({ map: labelTexture('GARAGE ZERO') });
+  const hs = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.6), G.hqSignMat); hs.position.set(0, 28.5, 3.02); hq.add(hs);
+  const crown = box(11.6, 0.6, 6.6, G.canopyMat); crown.position.y = 30.3; hq.add(crown);
+}
+function syncCompany() {
+  if (!G.truckHall || !S) return;
+  const C = S.custom || DEFAULT_CUSTOM, tier = S.tier || 0;
+  G.truckHall.visible = !!S.truckHall;
+  if (CITY.washBld) CITY.washBld.visible = !S.truckHall;
+  if (CITY.sideBld) CITY.sideBld.visible = !S.truckHall;
+  G.office.visible = tier >= 1; G.canopy.visible = tier >= 2; G.hq.visible = tier >= 4;
+  G.canopyMat.color.set(C.accent);
+  const nm = S.name.toUpperCase().slice(0, 18), key = nm + C.accent;
+  if (G.hqSignMat.userData.k !== key) { G.hqSignMat.map = labelTexture([nm, 'HOLDİNG'], { accent: C.accent }); G.hqSignMat.needsUpdate = true; G.hqSignMat.userData.k = key; G.truckSignMat.map = labelTexture([nm, 'TIR SERVİSİ'], { accent: C.accent }); G.truckSignMat.needsUpdate = true; }
+  // şubeler: karşı sıradaki dükkân tabelalarını devral
+  CITY.shopFronts.forEach((b, i) => {
+    const br = (S.branches || []).find(x => x.bld === i), u = b.userData; if (!u.sign) return;
+    const want = br ? 'br' + nm + br.district + C.accent : 'def';
+    if (u.signKey === want) return;
+    u.signKey = want;
+    u.sign.material.map = br ? shopSignTexture(nm.slice(0, 12), C.accent, '#1a1206') : shopSignTexture(u.signDef[0], u.signDef[1], u.signDef[2]);
+    u.sign.material.needsUpdate = true;
+    u.awn.material = br ? new THREE.MeshStandardMaterial({ color: C.accent }) : cmat(new THREE.Color(u.signDef[1]).getHex());
+  });
 }

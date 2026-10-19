@@ -6,7 +6,7 @@ const PREFS = (() => { try { return Object.assign({ autoPause: false, camSens: 1
 function savePrefs() { try { localStorage.setItem('gz_prefs', JSON.stringify(PREFS)); } catch (e) { } }
 
 const UI = {
-  selected: null, panel: null, carTab: 'info', tagEls: {}, hotEls: {}, started: false, ptab: { jobs: 'door', gallery: 'stock', biz: 'profile' },
+  selected: null, panel: null, carTab: 'info', tagEls: {}, hotEls: {}, started: false, ptab: { jobs: 'door', gallery: 'stock', biz: 'profile', corp: 'tier' },
   busy: false, work: null, inspect: null, haggle: null,
 
   init() {
@@ -69,6 +69,7 @@ const UI = {
     ['reviews', 'pendingReviews', 'goals', 'history', 'loans', 'warranty'].forEach(k => S[k] = S[k] || []); S.laborRate = S.laborRate || 2500; S.adUntil = S.adUntil || 0; if (!S.goals.length) genGoals();
     S.cfg = S.cfg || Object.assign({}, DIFFICULTY.normal); S.custom = Object.assign({}, DEFAULT_CUSTOM, S.custom || {});
     S.staff.forEach(w => { if (w.role === 'usta' && !w.spec) w.spec = 'genel'; });
+    S.tier = S.tier || 0; ['branches', 'contracts', 'contractOffers'].forEach(k => S[k] = S[k] || []);
     S.ach = S.ach || {}; S.weather = S.weather || 'sunny'; S.forecast = S.forecast || 'sunny';
     S.staff.forEach(w => { if (w.energy == null) w.energy = 100; if (w.morale == null) w.morale = 70; });
     S.cars.concat(S.jobs).forEach(c => { c._noAnim = true; c._custSpawned = false; });
@@ -151,6 +152,13 @@ const UI = {
       case 'autoOrd': { S.autoOrder = S.autoOrder || {}; const seq = [0, 1, 2, 3, 5], cur = S.autoOrder[d.f] || 0; const nx = seq[(seq.indexOf(cur) + 1) % seq.length]; if (nx) S.autoOrder[d.f] = nx; else delete S.autoOrder[d.f]; UI.render(); break; }
       case 'bid': bidAuction(id, $('#bid_' + id).value); break;
       case 'cam': UI.camNext(); break;
+      case 'tierUp': upgradeTier(); break;
+      case 'truckHall': UI.modal('Tır servisi kurulsun mu?', `<p>${fmt(TRUCK_HALL_COST)} ödeyerek şehrin batısında 2 kanallı ağır vasıta servisi açarsın. Kanallara usta atamayı unutma.</p>`, [{ t: 'Vazgeç' }, { t: 'Kur', cls: 'pri', fn: buyTruckHall }]); break;
+      case 'brBuy': buyBranch(+d.i); break;
+      case 'brUp': upgradeBranch(id); break;
+      case 'brMgr': trainBranchMgr(id); break;
+      case 'brSell': UI.modal('Şube satılsın mı?', '<p>Yatırımın yaklaşık %70’ini geri alırsın.</p>', [{ t: 'Vazgeç' }, { t: 'Sat', cls: 'pri', fn: () => sellBranch(id) }]); break;
+      case 'conOk': acceptContract(id); break;
       case 'mbtn': { const b = UI.mBtns[+d.i]; UI.closeModal(); b && b.fn && b.fn(); break; }
       case 'hAccept': haggleAccept(); break;
       case 'hCounter': haggleCounter($('#hPrice').value); break;
@@ -232,17 +240,19 @@ const UI = {
     if ($('#hRepBar').innerHTML !== rb) $('#hRepBar').innerHTML = rb;
     $('#hLvlV').textContent = lvl() + ' · ' + (S.xp % 400) + '/400';
     const nj = S.jobs.length + S.appReq.length; $('#bJobs').hidden = !nj; $('#bJobs').textContent = nj;
-    const noUsta = S.lic.servis ? [...Array(S.bays).keys()].filter(i => !S.staff.some(w => w.role === 'usta' && w.bay === i)).length : 0;
+    const noUsta = S.lic.servis ? allBays().filter(i => !S.staff.some(w => w.role === 'usta' && w.bay === i)).length : 0;
     $('#bStaff').hidden = !noUsta; $('#bStaff').textContent = '!';
     const fails = S.errands.filter(e => e.status === 'fail').length; $('#bDepot').hidden = !fails; $('#bDepot').textContent = fails;
     $('#dGallery').hidden = !S.lic.galeri && !S.cars.some(c => c.owner === 'me');
     $('#dStaff').hidden = $('#dDepot').hidden = !S.lic.servis;
+    const nx = TIERS[(S.tier || 0) + 1], tierReady = nx && tierReqs((S.tier || 0) + 1).every(r => r.ok);
+    $('#bCorp').hidden = !(tierReady || (S.contractOffers || []).length); $('#bCorp').textContent = tierReady ? '↑' : (S.contractOffers || []).length;
     document.querySelectorAll('#spd button[data-v]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === S.speed));
     const sb = $('#sndBtn'); if (sb) { const on = S.settings.sound !== false; sb.setAttribute('aria-pressed', 'false'); sb.style.opacity = on ? 1 : 0.45; $('#sndWave').style.display = on ? '' : 'none'; }
     const now = performance.now(); if (now - (UI._lu || 0) > 400) { UI._lu = now; UI.updateLifts(); }
   },
   carMeta(c) {
-    const loc = c.out ? 'Dış serviste' : c.bay != null ? `Lift ${c.bay + 1}` : c.lot != null ? `Park P${c.lot + 1}` : c.apron != null ? 'Kapıda bekliyor' : '';
+    const loc = c.out ? 'Dış serviste' : c.bay != null ? bayName(c.bay) : c.lot != null ? `Park P${c.lot + 1}` : c.apron != null ? 'Kapıda bekliyor' : '';
     return `${c.year} · ${c.km.toLocaleString('tr-TR')} km · Boya %${c.paint}${loc ? ' · ' + loc : ''}`;
   },
 
@@ -367,7 +377,7 @@ const UI = {
     const queued = tasksFor(c.id);
     const qOf = pred => queued.some(x => pred(x.t));
     let h = '';
-    if (!w) h += `<div class="note">${c.bay != null ? `Lift ${c.bay + 1}’e atanmış usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
+    if (!w) h += `<div class="note">${c.bay != null ? `${bayName(c.bay)}’e atanmış usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
     if (I.view === 'general') {
       h += `<h3>Genel</h3>${c.owner === 'customer' ? `<ul class="complaint">${c.sym.map(s => `<li>${SYM[s]}</li>`).join('')}</ul>` : ''}<div class="acts">`;
       h += `<button class="btn ${c.findings.overview ? '' : 'pri'}" data-act="overview" ${qOf(t => t.type === 'overview') ? 'disabled' : ''}>Ustaya genel kontrol yaptır<span>${OVERVIEW_MIN} dk · ${w ? stars(w.skill) : '—'}</span></button>`;
@@ -423,7 +433,7 @@ const UI = {
     $('#iNotes').textContent = `Not ${Object.keys(c.findings).length}`;
     const queued = tasksFor(c.id), qOf = pred => queued.some(x => pred(x.t));
     let h = '';
-    if (!w) h += `<div class="note">${c.bay != null ? `Lift ${c.bay + 1}’de usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
+    if (!w) h += `<div class="note">${c.bay != null ? `${bayName(c.bay)}’de usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
     if (I.view === 'general') {
       if (c.owner === 'customer') h += `<div class="ctxt">${c.sym.map(s => SYM[s]).join(' · ')}</div>`;
       h += `<div class="gridb">`;
@@ -513,10 +523,10 @@ const UI = {
     if (tab === 'door') {
       h += S.jobs.length ? `<div class="list">${S.jobs.map(c => {
         const left = c.cust.deadline - S.day;
-        return `<div class="card"><div class="row sp"><span class="title">${MODELS[c.model].name}</span><span class="row">${c.regular ? '<span class="chip ok">Sadık müşteri</span>' : ''}${c.fleet ? '<span class="chip acc">Filo</span>' : ''}${(c.modReq || []).length ? '<span class="chip info">Modifiye</span>' : ''}${c.warranty ? '<span class="chip bad">Garanti</span>' : ''}${c.tow ? '<span class="chip warn">Çekiciyle</span>' : ''}${c.appt ? '<span class="chip ok">Randevulu</span>' : ''}<span class="chip ${left <= 0 ? 'bad' : ''}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün'}</span></span></div>
+        return `<div class="card"><div class="row sp"><span class="title">${MODELS[c.model].name}</span><span class="row">${c.truck ? '<span class="chip warn">Tır</span>' : ''}${c.contract ? '<span class="chip acc">Sözleşmeli</span>' : ''}${c.regular ? '<span class="chip ok">Sadık müşteri</span>' : ''}${c.fleet ? '<span class="chip acc">Filo</span>' : ''}${(c.modReq || []).length ? '<span class="chip info">Modifiye</span>' : ''}${c.warranty ? '<span class="chip bad">Garanti</span>' : ''}${c.tow ? '<span class="chip warn">Çekiciyle</span>' : ''}${c.appt ? '<span class="chip ok">Randevulu</span>' : ''}<span class="chip ${left <= 0 ? 'bad' : ''}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün'}</span></span></div>
           <span class="meta">${esc(c.cust.name)} · ${c.year} · ${c.km.toLocaleString('tr-TR')} km · ${c.leaveAt ? Math.max(0, Math.round(c.leaveAt - S.minute)) + ' dk sabır' : ''}</span>
           <ul class="complaint">${c.sym.map(s => `<li>${SYM[s]}</li>`).join('')}</ul>
-          <div class="btns"><button class="btn sm" data-act="reject" data-id="${c.id}">Reddet</button><button class="btn sm pri" data-act="accept" data-id="${c.id}" ${freeBay() < 0 ? 'disabled' : ''}>${freeBay() < 0 ? 'Lift dolu' : 'Kabul et'}</button></div></div>`;
+          <div class="btns"><button class="btn sm" data-act="reject" data-id="${c.id}">Reddet</button><button class="btn sm pri" data-act="accept" data-id="${c.id}" ${(c.truck ? freeTruckBay() : freeBay()) < 0 ? 'disabled' : ''}>${(c.truck ? freeTruckBay() : freeBay()) < 0 ? (c.truck ? 'Kanal dolu' : 'Lift dolu') : 'Kabul et'}</button></div></div>`;
       }).join('')}</div>` : `<div class="note">Şu an kapıda müşteri yok. Gün içinde müşteriler gelir, telefonla randevu da isterler.</div>`;
     }
     if (tab === 'appt') {
@@ -531,9 +541,9 @@ const UI = {
       h += `<p class="muted">Randevulu müşteri daha sabırlıdır ve iyi iş çıkarırsan ekstra itibar verir. Kapıda geri çevirirsen itibar kaybedersin.</p>`;
     }
     if (tab === 'lifts') {
-      h += `<div class="list">${[...Array(S.bays).keys()].map(i => {
+      h += `<div class="list">${allBays().map(i => {
         const car = S.cars.find(c => c.bay === i), u = S.staff.find(w => w.role === 'usta' && w.bay === i), ci = S.staff.find(w => w.role === 'cirak' && w.bay === i);
-        return `<div class="card"><div class="row sp"><span class="title">Lift ${i + 1}</span><span class="meta">${u ? wname(u) + ' ' + stars(u.skill) : '<span class="bad">usta yok</span>'}${ci ? ' · ' + wname(ci) : ''}</span></div>
+        return `<div class="card"><div class="row sp"><span class="title">${bayName(i)}</span><span class="meta">${u ? wname(u) + ' ' + stars(u.skill) : '<span class="bad">usta yok</span>'}${ci ? ' · ' + wname(ci) : ''}</span></div>
           ${car ? `<span class="meta">${MODELS[car.model].name}${car.owner === 'customer' ? ' · ' + esc(car.cust.name) + (car.cust.deadline <= S.day ? ' · <span class="bad">bugün teslim</span>' : '') : ' · stok aracı'} · ${Object.keys(car.findings).length} not · ${tasksFor(car.id).length} iş sırada</span><button class="btn sm" data-act="open" data-id="${car.id}">Aç</button>` : '<span class="meta">Boş</span>'}</div>`;
       }).join('')}</div>`;
     }
@@ -569,7 +579,7 @@ const UI = {
   },
   view_staff() {
     const wages = S.staff.reduce((s, w) => s + w.wage, 0);
-    const bayBtns = w => `<div class="btns">${[...Array(S.bays).keys()].map(i => `<button class="btn sm ${w.bay === i ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="${i}">Lift ${i + 1}</button>`).join('')}<button class="btn sm ${w.bay == null ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="">Serbest</button></div>`;
+    const bayBtns = w => `<div class="btns">${allBays().map(i => `<button class="btn sm ${w.bay === i ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="${i}">${i >= 4 ? 'Tır ' + (i - 3) : 'Lift ' + (i + 1)}</button>`).join('')}<button class="btn sm ${w.bay == null ? 'pri' : ''}" data-act="assign" data-id="${w.id}" data-b="">Serbest</button></div>`;
     let h = `<div class="sec">Ekibin · günlük ${fmt(wages)}</div>`;
     h += S.staff.length ? `<div class="list">${S.staff.map(w => {
       const cur = w.queue[0], er = w.errand && S.errands.find(e => e.id === w.errand);
@@ -603,6 +613,45 @@ const UI = {
     });
     h += `</div><p class="muted">“Oto” düğmesi en az stok sayısını ayarlar (0→1→2→3→5): gün sonunda eksik kalan parçalar toptancıdan otomatik tamamlanır. Çırağı ya da kuryeyi yedek parçacıya gönderebilirsin; bazen parça çıkmaz, başka yere yollarsın. Toptancı en ucuzudur ama ertesi sabah gelir.</p>`;
     return { title: 'Depo', sub: `${Object.values(S.stock).reduce((a, b) => a + b, 0)} parça stokta`, html: h };
+  },
+  view_corp() {
+    const tab = UI.ptab.corp || 'tier', tier = S.tier || 0;
+    const tabs = UI.tabsHtml('corp', [['tier', 'Kademe'], ['fac', 'Tesisler'], ['br', `Şubeler ${(S.branches || []).length}/${BRANCH_LIMIT[tier]}`], ['con', `Sözleşmeler ${(S.contracts || []).length}`]]);
+    let h = '';
+    if (tab === 'tier') {
+      h += `<div class="ladder">${TIERS.map((T, i) => `<div class="rung ${i < tier ? 'past' : i === tier ? 'now' : ''}"><span class="rn">${i + 1}</span><div><b>${T.name}</b><div class="meta">${T.perks.join(' · ')}</div></div></div>`).join('')}</div>`;
+      const nx = TIERS[tier + 1];
+      if (nx) {
+        const reqs = tierReqs(tier + 1), ok = reqs.every(r => r.ok);
+        h += `<div class="sec">Sonraki kademe: ${nx.name}</div><div class="card">${reqs.map(r => `<div class="row sp"><span>${r.ok ? '✓' : '○'} ${r.t}</span><span class="mono ${r.ok ? 'ok' : 'muted'}">${r.v}</span></div>`).join('')}
+          <button class="btn ${ok ? 'pri' : ''}" data-act="tierUp" ${ok ? '' : 'disabled'}>${ok ? `Büyü · ${fmt(nx.req.cash)}` : 'Koşullar tamamlanınca açılır'}</button></div>`;
+      } else h += `<div class="note">En üst kademedesin: ${TIERS[tier].name}. Şehrin en büyük oto servis holdingi sensin.</div>`;
+    }
+    if (tab === 'fac') {
+      h += `<div class="card"><div class="row sp"><span class="title">Tır Servisi</span>${S.truckHall ? '<span class="chip ok">Açık</span>' : `<span class="price" style="font-size:18px">${fmt(TRUCK_HALL_COST)}</span>`}</div>
+        <span class="meta">Şehrin batısında 2 kanallı ağır vasıta binası. Tırların faturası parça ×${TRUCK_PART_MUL}, işçilik ×${TRUCK_LABOR_MUL}. Her parça değişimi depodan ${TRUCK_STOCK} adet harcar. Kanallara ayrı usta ata.</span>
+        ${S.truckHall ? '' : `<button class="btn sm ${tier >= 2 ? 'pri' : ''}" data-act="truckHall" ${tier >= 2 ? '' : 'disabled'}>${tier >= 2 ? 'Tır servisini kur' : '“Profesyonel Servis” kademesi gerekli'}</button>`}</div>
+        <div class="card"><div class="row sp"><span class="title">Ofis katı</span><span class="chip ${tier >= 1 ? 'ok' : ''}">${tier >= 1 ? 'Var' : 'Kademe 2'}</span></div><span class="meta">Atölyenin üstüne idari ofis. Her gün +1 müşteri ve sözleşme teklifleri.</span></div>
+        <div class="card"><div class="row sp"><span class="title">Cam vitrin ve ışıklı kanopi</span><span class="chip ${tier >= 2 ? 'ok' : ''}">${tier >= 2 ? 'Var' : 'Kademe 3'}</span></div><span class="meta">Dükkân cephesine vurgu renginde ışıklı saçak.</span></div>
+        <div class="card"><div class="row sp"><span class="title">Merkez plaza kulesi</span><span class="chip ${tier >= 4 ? 'ok' : ''}">${tier >= 4 ? 'Var' : 'Kademe 5'}</span></div><span class="meta">Atölyenin arkasında şirket adını taşıyan 30 m’lik kule. Tüm şubeler +%20 kâr.</span></div>`;
+    }
+    if (tab === 'br') {
+      const lim = BRANCH_LIMIT[tier], brs = S.branches || [];
+      h += `<p class="muted">Şubeler kendi müdürleriyle çalışır ve her gün sonunda kâr (bazen zarar) getirir. Açtığın şube, yolun karşısındaki dükkânlardan birinin tabelasında senin adınla görünür.</p>`;
+      if (brs.length) h += `<div class="list">${brs.map(b => `<div class="card"><div class="row sp"><span class="title">${b.district}</span><span class="chip">Seviye ${b.level}</span></div>
+        <span class="meta">Müdür ${stars(b.mgr)} · dün ${fmt(b.last)} · toplam ${fmt(b.total)}</span>
+        <div class="btns">${b.level < 3 ? `<button class="btn sm" data-act="brUp" data-id="${b.id}">Büyüt · ${fmt(BRANCH_UPGRADE[b.level])}</button>` : ''}${b.mgr < 5 ? `<button class="btn sm" data-act="brMgr" data-id="${b.id}">Müdür eğitimi · ${fmt(40000 * b.mgr)}</button>` : ''}<button class="btn sm ghost" data-act="brSell" data-id="${b.id}">Sat</button></div></div>`).join('')}</div>`;
+      h += `<div class="sec">Şube açılabilecek semtler</div>`;
+      h += lim ? `<div class="list">${DISTRICTS.map((D, i) => brs.some(b => b.district === D.name) ? '' : `<div class="card"><div class="row sp"><span class="title">${D.name}</span><span class="price" style="font-size:18px">${fmt(D.cost)}</span></div><span class="meta">Tahmini günlük kâr ~${fmt(D.base)}</span><button class="btn sm ${brs.length < lim ? 'pri' : ''}" data-act="brBuy" data-i="${i}" ${brs.length < lim ? '' : 'disabled'}>${brs.length < lim ? 'Şube aç' : 'Kademe sınırı dolu'}</button></div>`).join('')}</div>` : '<div class="note">İlk şube “Profesyonel Servis” kademesinde açılır.</div>';
+    }
+    if (tab === 'con') {
+      const cs = S.contracts || [], of = S.contractOffers || [];
+      h += `<p class="muted">Sözleşmeli şirketler gün içinde araç gönderir ve faturayı katsayıyla öder. Zamanında teslim etmezsen ya da arızayı çözemezsen ihlal sayılır; 3 ihlalde sözleşme bozulur. Kusursuz biten sözleşme prim verir.</p>`;
+      if (cs.length) h += `<div class="sec">Aktif</div><div class="list">${cs.map(k => `<div class="card"><div class="row sp"><span class="title">${k.company}</span><span class="chip ${k.strikes ? 'bad' : 'ok'}">${k.strikes} ihlal</span></div><span class="meta">${k.truck ? 'Tır' : 'Otomobil'} · günlük %${Math.round(k.perDay * 100)} ihtimalle araç · fatura ×${k.payMul.toFixed(2).replace('.', ',')} · Gün ${k.until}’e kadar · ${k.done} iş</span></div>`).join('')}</div>`;
+      h += `<div class="sec">Teklifler</div>`;
+      h += tier < 1 ? '<div class="note">Sözleşme teklifleri “Oto Servis” kademesinde gelmeye başlar.</div>' : of.length ? `<div class="list">${of.map(o => `<div class="card"><div class="row sp"><span class="title">${o.company}</span><span class="chip acc">×${o.payMul.toFixed(2).replace('.', ',')}</span></div><span class="meta">${o.truck ? 'Tır' : 'Otomobil'} · ${o.days} gün · günlük %${Math.round(o.perDay * 100)} ihtimalle araç</span><button class="btn sm pri" data-act="conOk" data-id="${o.id}">İmzala</button></div>`).join('')}</div>` : '<div class="note">Şu an yeni teklif yok; birkaç gün içinde gelir.</div>';
+    }
+    return { title: 'Şirket', sub: TIERS[tier].name, tabs, html: h };
   },
   view_shop() {
     const item = (name, desc, cost, owned, k, key, lockMsg) => `<div class="card"><div class="row sp"><span class="title">${name}</span>${owned ? '<span class="chip ok">Sahipsin</span>' : `<span class="price" style="font-size:18px">${fmt(cost)}</span>`}</div>
@@ -752,11 +801,11 @@ const UI = {
     if (UI.inspect || !S.lic.servis) { el.hidden = true; return; }
     el.hidden = false;
     const chips = [];
-    for (let i = 0; i < S.bays; i++) {
+    for (const i of allBays()) {
       const car = S.cars.find(c => c.bay === i), u = S.staff.find(w => w.role === 'usta' && w.bay === i);
       const q = car ? tasksFor(car.id) : [], cur = q.find(x => x.w.queue[0] === x.t);
       const st = !car ? 'empty' : cur ? 'work' : car.owner === 'customer' && car.cust.deadline <= S.day ? 'due' : 'idle';
-      chips.push(`<button class="lift ${st}" data-act="${car ? 'open' : 'liftEmpty'}" data-id="${car ? car.id : ''}"><b>L${i + 1}</b><span>${car ? MODELS[car.model].name : 'Boş lift'}</span><small>${u ? u.name + ' ' + '★'.repeat(u.skill) + (u.spec && u.spec !== 'genel' ? ' · ' + SPECS[u.spec].name : '') : 'usta yok'}${cur ? ' · çalışıyor' : q.length ? ' · ' + q.length + ' iş' : ''}</small></button>`);
+      chips.push(`<button class="lift ${st}" data-act="${car ? 'open' : 'liftEmpty'}" data-id="${car ? car.id : ''}"><b>${i >= 4 ? 'T' + (i - 3) : 'L' + (i + 1)}</b><span>${car ? MODELS[car.model].name : i >= 4 ? 'Boş tır kanalı' : 'Boş lift'}</span><small>${u ? u.name + ' ' + '★'.repeat(u.skill) + (u.spec && u.spec !== 'genel' ? ' · ' + SPECS[u.spec].name : '') : 'usta yok'}${cur ? ' · çalışıyor' : q.length ? ' · ' + q.length + ' iş' : ''}</small></button>`);
     }
     if (S.jobs.length) chips.push(`<button class="lift wait" data-act="panel" data-p="jobs"><b>${S.jobs.length}</b><span>Kapıda bekliyor</span><small>kabul / ret</small></button>`);
     const sig = chips.join('');
@@ -807,7 +856,7 @@ const UI = {
     const I = UI.inspect, wrap = $('#hots');
     if (!I || I.view === 'general') { if (wrap.childElementCount) { wrap.innerHTML = ''; UI.hotEls = {}; } return; }
     const c = carById(I.id), m = G.carMeshes[I.id]; if (!c || !m) return;
-    const ready = I.view === 'hood' ? m.userData.hoodT > 0.7 : m.userData.y > 1.2;
+    const ready = I.view === 'hood' ? m.userData.hoodT > 0.7 : (m.userData.y > 1.2 || m.userData.info.truck);
     const W = window.innerWidth, H = window.innerHeight;
     Object.entries(COMPS).forEach(([k, C]) => {
       if (C.view !== I.view) return;

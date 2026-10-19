@@ -311,3 +311,27 @@ const DAY_EVENTS = {
   fleet:   { name: 'Filo müşterisi',      desc: 'Bir şirket filosundan araç gelecek; teslimde %50 fazla öder.', p: 0.08 },
   inspect: { name: 'Belediye denetimi',   desc: 'Denetim var: atölye temiz ve liftlerde iş düzenliyse ödül, değilse ceza.', p: 0.05 },
 };
+
+// ---------- v12: büyüyen şirket ----------
+MODELS.kartal = { name: 'Kartal 18.40 Çekici', type: 'truck', base: 3800000, lvl: 1, truck: true };
+MODELS.toros  = { name: 'Toros 26.48 Çekici',  type: 'truck', base: 5200000, lvl: 2, truck: true };
+const TRUCK_PART_MUL = 2.5, TRUCK_LABOR_MUL = 1.6, TRUCK_STOCK = 2;
+const TRUCK_HALL_COST = 650000;
+const TIERS = [
+  { name: 'Mahalle Tamirhanesi', perks: ['Başlangıç'] },
+  { name: 'Oto Servis', req: { jobs: 10, rep: 40, cash: 150000 }, perks: ['Çatıya ofis katı', 'Her gün +1 müşteri', 'Kurumsal sözleşme teklifleri'] },
+  { name: 'Profesyonel Servis', req: { jobs: 30, rep: 55, rating: 4.0, cash: 400000 }, perks: ['Tır Servisi binası açılabilir', 'İlk şubeni açabilirsin', 'Cam vitrin ve ışıklı tabela'] },
+  { name: 'Servis Zinciri', req: { jobs: 70, rep: 65, branches: 1, cash: 900000 }, perks: ['3 şubeye kadar', 'Tır sözleşmeleri', 'Usta adayları daha yetenekli'] },
+  { name: 'Garage Zero Holding', req: { jobs: 150, rep: 75, branches: 3, cash: 2500000 }, perks: ['Merkez plaza kulesi', '6 şubeye kadar', 'Tüm şubeler +%20 kâr'] },
+];
+const BRANCH_LIMIT = [0, 0, 1, 3, 6];
+const DISTRICTS = [
+  { name: 'Çarşı', cost: 600000, base: 14000 }, { name: 'Sanayi Sitesi', cost: 750000, base: 18000 },
+  { name: 'Üniversite', cost: 700000, base: 15000 }, { name: 'Sahil Yolu', cost: 950000, base: 22000 },
+  { name: 'Organize Sanayi', cost: 1200000, base: 28000 }, { name: 'Havalimanı Yolu', cost: 1500000, base: 34000 },
+];
+const BRANCH_UPGRADE = [0, 250000, 500000];   // seviye 1→2, 2→3
+const CONTRACT_COMPANIES = [
+  { name: 'Hızlı Kargo', truck: false }, { name: 'Sarı Taksi Kooperatifi', truck: false }, { name: 'Belediye Filo', truck: false },
+  { name: 'Anadolu Lojistik', truck: true }, { name: 'Ege Nakliyat', truck: true }, { name: 'Market Zinciri Dağıtım', truck: true },
+];
