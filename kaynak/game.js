@@ -20,7 +20,7 @@ function jobById(id) { return S.jobs.find(c => c.id === id); }
 function staffById(id) { return S.staff.find(w => w.id === id); }
 function uid() { return 'c' + (S.idc++); }
 function stars(n) { return '★'.repeat(n) + '☆'.repeat(5 - n); }
-function wname(w) { return w.role === 'usta' ? `${w.name} Usta` : `Çırak ${w.name}`; }
+function wname(w) { if (w.id === 'me') return 'Sen'; return w.role === 'usta' ? `${w.name} Usta` : `Çırak ${w.name}`; }
 
 function carValue(c, withFaults = true) {
   const m = MODELS[c.model], age = YEAR - c.year;
@@ -275,6 +275,7 @@ function taskLabel(t) {
   return TASK_NAMES[t.type];
 }
 function enqueue(c, t) {
+  if (typeof FPS !== 'undefined' && FPS.claim) return FPS.startWork(c, t);
   const w = workerFor(c);
   if (!w) { UI.toast(c.bay != null ? `Lift ${c.bay + 1}’de usta yok. Personel’den usta ata.` : 'Boşta usta yok. Personel’den usta işe al.', 'bad'); return false; }
   if (c.out) { UI.toast('Araç dış serviste.', 'bad'); return false; }
@@ -602,7 +603,7 @@ function acceptJob(id) {
   log(`${j.cust.name} — ${MODELS[j.model].name} ${bayName(b)}’e alındı.`);
   if (!S.staff.some(w => w.role === 'usta' && w.bay === b)) UI.toast(`${bayName(b)}’de usta yok — Personel’den ata.`, 'bad');
   Life.toBench(j.id);
-  UI.selected = j.id; syncScene(); UI.openCar(j.id, 'info'); save();
+  UI.selected = j.id; syncScene(); if (!(typeof FPS !== 'undefined' && FPS.on)) UI.openCar(j.id, 'info'); else UI.toast(`${j.cust.name}: aracı ${bayName(b)}’e alındı.`, 'ok'); save();
 }
 function rejectJob(id) { const j = jobById(id); if (!j) return; if (j.warranty) { addRep(-5); addReview(j.cust.name, 1, 'Garanti kapsamındaki aracımı geri çevirdiler. Rezalet.'); } else if (j.appt && Math.random() < 0.7) addReview(j.cust.name, 1, REVIEW_TXT[1][1]); jobLeaves(j, null, j.appt ? -3 : 0); UI.render(); }
 function jobLeaves(j, why, rep) {

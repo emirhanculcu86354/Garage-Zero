@@ -212,7 +212,7 @@ function syncScene() {
       else if (car.tow && car.apron != null) { towIn(car, m, slot); return; }
       else { m.position.set(-75, 0, LANE_E); m.rotation.y = Math.PI / 2; }
     }
-    if (m.userData.towing) return;
+    if (m.userData.towing || m.userData.manual) return;
     if (m.userData.slotKey !== slot.key && !m.userData.testDrive) {
       if (m.userData.y > 0.05) { m.userData.tY = 0; }
       driveCar(m, routeTo(m.position, slot), 7, () => { if (car.apron != null && car.owner === 'customer' && !car._custSpawned) Life.customerArrived(car); });
@@ -316,8 +316,9 @@ function focusHome() { const c = G.cam; c.tTarget.set(6, 0, 4); c.tDist = window
 
 function bindCameraInput(el) {
   const ptrs = new Map(); let moved = 0, lastPinch = 0, lastMid = null, downAt = 0, btn = 0;
-  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; downAt = performance.now(); btn = e.button; lastPinch = 0; lastMid = null; });
+  el.addEventListener('pointerdown', e => { if (FPS.on) return; el.setPointerCapture(e.pointerId); ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = 0; downAt = performance.now(); btn = e.button; lastPinch = 0; lastMid = null; });
   el.addEventListener('pointermove', e => {
+    if (FPS.on) return;
     if (!ptrs.has(e.pointerId)) { UI.hoverAt && UI.hoverAt(e.clientX, e.clientY); return; }
     const prev = ptrs.get(e.pointerId); const dx = e.clientX - prev.x, dy = e.clientY - prev.y;
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -335,12 +336,13 @@ function bindCameraInput(el) {
     }
   });
   const up = e => {
+    if (FPS.on) { ptrs.delete(e.pointerId); return; }
     if (ptrs.has(e.pointerId) && ptrs.size === 1 && moved < 8 && performance.now() - downAt < 450) pickAt(e.clientX, e.clientY);
     ptrs.delete(e.pointerId); lastPinch = 0; lastMid = null;
   };
   el.addEventListener('pointerup', up); el.addEventListener('pointercancel', e => ptrs.delete(e.pointerId));
   el.addEventListener('contextmenu', e => e.preventDefault());
-  el.addEventListener('wheel', e => { e.preventDefault(); G.cam.tDist = THREE.MathUtils.clamp(G.cam.tDist * (1 + Math.sign(e.deltaY) * 0.1), 2.2, 70); }, { passive: false });
+  el.addEventListener('wheel', e => { e.preventDefault(); if (FPS.on) return; G.cam.tDist = THREE.MathUtils.clamp(G.cam.tDist * (1 + Math.sign(e.deltaY) * 0.1), 2.2, 70); }, { passive: false });
   function pan(dx, dy) {
     const c = G.cam, k = c.dist * 0.0018;
     const fwd = new THREE.Vector3(Math.sin(c.yaw), 0, Math.cos(c.yaw)), right = new THREE.Vector3(fwd.z, 0, -fwd.x);
@@ -380,13 +382,16 @@ function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(G.clock.getDelta(), 0.05), t = G.clock.elapsedTime;
   const c = G.cam, k = 1 - Math.pow(0.002, dt);
-  c.yaw += (c.tYaw - c.yaw) * k; c.pitch += (c.tPitch - c.pitch) * k; c.dist += (c.tDist - c.dist) * k; c.target.lerp(c.tTarget, k);
-  G.camera.position.set(c.target.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, Math.max(0.25, c.target.y + Math.sin(c.pitch) * c.dist), c.target.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
-  G.camera.lookAt(c.target);
+  if (FPS.on) FPS.update(dt);
+  else {
+    c.yaw += (c.tYaw - c.yaw) * k; c.pitch += (c.tPitch - c.pitch) * k; c.dist += (c.tDist - c.dist) * k; c.target.lerp(c.tTarget, k);
+    G.camera.position.set(c.target.x + Math.sin(c.yaw) * Math.cos(c.pitch) * c.dist, Math.max(0.25, c.target.y + Math.sin(c.pitch) * c.dist), c.target.z + Math.cos(c.yaw) * Math.cos(c.pitch) * c.dist);
+    G.camera.lookAt(c.target);
+  }
 
   Object.values(G.carMeshes).forEach(m => {
     const u = m.userData;
-    if (u.towing) return;
+    if (u.towing || u.manual) return;
     if (u.path && u.path.length) {
       if (u.y > 0.03) { u.y += (0 - u.y) * k * 0.5; m.position.y = u.y; return; }   // önce lifti indir
       const tgt = u.path[0], dx = tgt.x - m.position.x, dz = tgt.z - m.position.z, dist = Math.hypot(dx, dz);

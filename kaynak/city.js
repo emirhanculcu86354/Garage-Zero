@@ -126,6 +126,7 @@ function addBuilding(x, z, w, h, d, color, sign, rot) {
   CITY.windowsMats.push(wallM);
   const plain = cmat(new THREE.Color(color).getHex(), { roughness: 0.9 });
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot; s.add(g);
+  (CITY.blds = CITY.blds || []).push({ g, x, z, w, d, rot });
   const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [plain, plain, cmat(0x5b5f63), plain, wallM, plain]);
   b.position.y = h / 2; b.castShadow = true; b.receiveShadow = true; g.add(b);
   const cornice = box(w + 0.3, 0.3, d + 0.3, cmat(0x6e6a63)); cornice.position.y = h + 0.15; g.add(cornice);

@@ -73,7 +73,7 @@ const UI = {
     S.ach = S.ach || {}; S.weather = S.weather || 'sunny'; S.forecast = S.forecast || 'sunny';
     S.staff.forEach(w => { if (w.energy == null) w.energy = 100; if (w.morale == null) w.morale = 70; });
     S.cars.concat(S.jobs).forEach(c => { c._noAnim = true; c._custSpawned = false; });
-    $('#start').hidden = true; $('#hud').hidden = false; $('#dock').hidden = false; $('#camBtn').hidden = false;
+    $('#start').hidden = true; $('#hud').hidden = false; $('#dock').hidden = false; $('#camBtn').hidden = false; $('#fpsBtn').hidden = false;
     if (!G.renderer) initScene();
     UI.started = true;
     applyCustom(); syncScene(); focusHome(); Life.restore(); applyWeather(); UI.render();
@@ -152,6 +152,7 @@ const UI = {
       case 'autoOrd': { S.autoOrder = S.autoOrder || {}; const seq = [0, 1, 2, 3, 5], cur = S.autoOrder[d.f] || 0; const nx = seq[(seq.indexOf(cur) + 1) % seq.length]; if (nx) S.autoOrder[d.f] = nx; else delete S.autoOrder[d.f]; UI.render(); break; }
       case 'bid': bidAuction(id, $('#bid_' + id).value); break;
       case 'cam': UI.camNext(); break;
+      case 'fps': FPS.toggle(); break;
       case 'tierUp': upgradeTier(); break;
       case 'truckHall': UI.modal('Tır servisi kurulsun mu?', `<p>${fmt(TRUCK_HALL_COST)} ödeyerek şehrin batısında 2 kanallı ağır vasıta servisi açarsın. Kanallara usta atamayı unutma.</p>`, [{ t: 'Vazgeç' }, { t: 'Kur', cls: 'pri', fn: buyTruckHall }]); break;
       case 'brBuy': buyBranch(+d.i); break;
@@ -336,6 +337,7 @@ const UI = {
 
   // ---------- inceleme modu ----------
   enterInspect(id, view) {
+    if (FPS.on) FPS.exit();
     const c = carById(id); if (!c) return;
     UI.closePanel(true); UI.selected = id;
     UI.inspect = { id, view: null, comp: null };
@@ -905,6 +907,7 @@ const UI = {
   },
   help() {
     UI.modal('Nasıl oynanır', `<ul class="plain">
+      <li><b>Sahaya in</b> (V tuşu ya da sol alttaki düğme): birinci şahıs görünümde atölyede yürü, kaputu kendin aç, lifti kaldır, parçalara nişan alıp <b>E</b> ile kendin kontrol et, ölç, değiştir; müşteriyle kapıda konuş. <b>Direksiyona geç</b> ile arabayı kendin sür (300 m = test sürüşü, çarparsan boya gider). L: el feneri, H: parça etiketleri. Telefonda sol taraf yürür/sürer, sağ taraf bakar.</li>
       <li><b>Saat akıyor</b> (08:00–18:00). Üstten duraklat ya da 3×/8× hızlandır.</li>
       <li><b>Müşteriler</b> kapıya gelir ya da telefonla <b>randevu</b> ister (İşler → Randevu). Kabul ettiğin araç lifte girer.</li>
       <li><b>Personel</b>: Her lifte bir usta ata, istersen bir çırak. Ustanın yıldızı arttıkça işi hızlanır ve “genel kontrol”de arızayı daha iyi sezer. Maaşlar gün sonunda ödenir.</li>

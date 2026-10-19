@@ -54,6 +54,26 @@ const SFX = {
   },
   beep() { if (!this.ok('beep', 0.6)) return; this.tone(1000, 0.12, { type: 'square', vol: 0.04 }); this.tone(1000, 0.12, { type: 'square', vol: 0.04, at: 0.25 }); },
   ding() { if (!this.ok('ding', 0.3)) return; this.tone(1046, 0.4, { type: 'sine', vol: 0.12 }); this.tone(1568, 0.5, { type: 'sine', vol: 0.08, at: 0.08 }); },
+  motor(v, thr) {
+    if (!this.ctx) return;
+    const c = this.ctx;
+    if (v === null || !this.on()) { if (this._mo) { this._mo.g.gain.setTargetAtTime(0, c.currentTime, 0.15); } return; }
+    if (!this._mo) {
+      const o = c.createOscillator(), o2 = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'sawtooth'; o2.type = 'square'; f.type = 'lowpass'; f.frequency.value = 420; g.gain.value = 0;
+      o.connect(f); o2.connect(f); f.connect(g); g.connect(this.master); o.start(); o2.start();
+      this._mo = { o, o2, f, g };
+    }
+    const sp = Math.abs(v), gearPos = sp < 6 ? sp / 6 : sp < 13 ? (sp - 6) / 7 : (sp - 13) / 11;
+    const fq = 34 + gearPos * 46 + (thr > 0 ? 6 : 0);
+    this._mo.o.frequency.setTargetAtTime(fq, c.currentTime, 0.08); this._mo.o2.frequency.setTargetAtTime(fq * 0.5, c.currentTime, 0.08);
+    this._mo.f.frequency.setTargetAtTime(300 + gearPos * 400 + (thr > 0 ? 200 : 0), c.currentTime, 0.1);
+    this._mo.g.gain.setTargetAtTime(0.05 + (thr > 0 ? 0.03 : 0), c.currentTime, 0.1);
+  },
+  step() { if (!this.ok('step', 0.18)) return; this.noise(0.07, { vol: 0.09, freq: 260 + Math.random() * 120, q: 0.7, type: 'lowpass' }); },
+  tick() { if (!this.ok('tick', 0.05)) return; this.tone(900, 0.04, { type: 'square', vol: 0.025 }); },
+  hum(up) { if (!this.ok('hum', 0.8)) return; this.tone(up ? 120 : 150, 1.1, { type: 'sawtooth', vol: 0.03, slide: up ? 50 : -40, attack: 0.08 }); this.noise(1.0, { vol: 0.02, freq: 500, q: 0.6 }); },
+  scrub() { if (!this.ok('scrub', 0.5)) return; this.noise(0.35, { vol: 0.05, freq: 1100, q: 0.8 }); },
   bad() { if (!this.ok('bad', 0.5)) return; this.tone(300, 0.25, { type: 'triangle', vol: 0.1, slide: -120 }); },
 };
 document.addEventListener('pointerdown', () => SFX.init(), { passive: true });
