@@ -1,4 +1,5 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <title>Garage Zero</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -135,7 +136,7 @@ input[type=number],input[type=text]{background:#0d1013;border:1px solid var(--li
 .t{background:var(--panel2);border:1px solid var(--line);border-left:4px solid var(--info);padding:9px 13px;border-radius:7px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.4);animation:tin .25s ease}
 .t.ok{border-left-color:var(--ok)} .t.bad{border-left-color:var(--bad)}
 @keyframes tin{from{transform:translateY(8px);opacity:0}}
-#modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;background:rgba(6,8,10,.62);padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
+#modal{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:rgba(6,8,10,.62);padding:16px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px))}
 .mbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;width:min(480px,100%);max-height:86vh;overflow:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px;touch-action:pan-y}
 .mbox h3{margin:0;font-family:var(--f-display);font-weight:900;font-size:30px;letter-spacing:.02em;text-wrap:balance}
 .mbox .big{font-family:var(--f-display);font-weight:900;font-size:40px;margin:0}
@@ -292,6 +293,47 @@ body.inspecting #toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 190px
 .tbl th,.tbl td{padding:5px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}.tbl th:first-child,.tbl td:first-child{text-align:left}
 .tbl th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
 
+
+/* ---- kompakt inceleme (telefon) ---- */
+.iclock{display:none;font-weight:700;font-size:13px;color:var(--muted)}
+.isheet.compact{gap:8px;padding:10px 12px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -12px;padding:0 12px 2px;touch-action:pan-x}
+.chips::-webkit-scrollbar{display:none}
+.cchip{flex:none;display:flex;align-items:center;gap:6px;padding:8px 11px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:600;white-space:nowrap}
+.cchip i{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.cchip.ok i{background:var(--ok)}.cchip.ab i{background:var(--warn)}.cchip.new i{background:var(--info)}.cchip.hint i{background:#b98cff}
+.cchip.sel{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 18%,var(--panel2))}
+.gridb{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.gridb .btn{flex-direction:column;align-items:flex-start;gap:1px;min-height:50px;text-align:left}
+.gridb .btn small{font-weight:500;font-size:11.5px;opacity:.8}
+.ctitle{font-family:var(--f-display);font-size:21px;font-weight:800}
+.ctxt{font-size:12.5px;color:var(--muted);line-height:1.4}
+.prow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13.5px;font-weight:600}
+.prow small{display:block;font-weight:500;font-size:11.5px;color:var(--muted)}
+.qline{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:6px}
+.isheet .hint{margin:0;font-size:12.5px}
+.isheet.compact .res{font-size:12px;padding:6px 8px}
+@media (max-width:760px), (max-height:520px) and (orientation:landscape){
+  body.inspecting #hud,body.inspecting #lifts{display:none}
+  .ibar{top:calc(env(safe-area-inset-top,0px) + 8px)!important;flex-wrap:nowrap!important;padding:5px!important;gap:6px!important}
+  .ibar .btn.sm{padding:6px 9px;min-height:34px}
+  .iname{min-width:0;flex:1}.iname b{font-size:16px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.iname span{display:none}
+  .seg button{padding:6px 8px!important;font-size:12px!important}.seg .lng{display:none}
+  .iclock{display:inline}
+  .iwork{top:calc(env(safe-area-inset-top,0px) + 58px)!important;bottom:auto!important;left:8px!important;right:8px;transform:none!important;min-width:0;padding:5px 10px;font-size:12px}
+  body.inspecting #toast{top:calc(env(safe-area-inset-top,0px) + 100px)!important;bottom:auto!important}
+  .hot i{width:22px;height:22px}
+  .hot{padding:8px}
+}
+@media (max-width:760px){
+  .isheet{max-height:40vh!important}
+}
+@media (max-height:520px) and (orientation:landscape){
+  .ibar{right:auto!important;max-width:calc(100vw - min(340px,44vw) - 24px)!important}
+  .isheet{top:8px!important;width:min(340px,44vw)!important}
+  .iwork{right:auto;width:calc(100vw - min(340px,44vw) - 34px)}
+}
+
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 
@@ -301,7 +343,7 @@ body.inspecting #toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 190px
 <header id="hud" hidden>
   <div class="hcell" id="hBrand"><span class="k" id="hMode">Servis</span><span class="v" id="hName">GARAGE ZERO</span></div>
   <div class="hcell" id="hTime"><span class="k" id="hDay">Gün 1</span><div class="trow"><span class="v mono" id="hClock">08:00</span>
-    <span class="spd" id="spd"><button data-act="speed" data-v="0" aria-label="Duraklat">❚❚</button><button data-act="speed" data-v="1" aria-label="Normal hız">1×</button><button data-act="speed" data-v="3" aria-label="Hızlı">3×</button><button data-act="speed" data-v="8" aria-label="Çok hızlı">8×</button></span></div><div class="bar"><i id="hBar"></i></div></div>
+    <span class="spd" id="spd"><button data-act="speed" data-v="0" aria-label="Duraklat">❚❚</button><button data-act="speed" data-v="1" aria-label="Normal hız">1×</button><button data-act="speed" data-v="3" aria-label="Hızlı">3×</button><button data-act="speed" data-v="8" aria-label="Çok hızlı">8×</button><button data-act="sound" id="sndBtn" aria-label="Ses aç/kapat"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 9v6h4l5 4V5L8 9z"/><path id="sndWave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg></button></span></div><div class="bar"><i id="hBar"></i></div></div>
   <div class="hcell" id="hCash"><span class="k">Kasa</span><span class="v" id="hCashV">0 ₺</span></div>
   <div class="hcell" id="hRep"><span class="k">İtibar</span><div class="bar" id="hRepBar"></div></div>
   <div class="hcell" id="hLvl"><span class="k">Seviye</span><span class="v" id="hLvlV">1</span></div>
@@ -328,7 +370,8 @@ body.inspecting #toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 190px
   <div class="ibar">
     <button class="btn sm" data-act="iexit">← Çık</button>
     <div class="iname"><b id="iName"></b><span id="iSub" class="muted"></span></div>
-    <div class="seg" id="iSeg"><button data-act="iview" data-v="hood">Kaput</button><button data-act="iview" data-v="under">Alt Takım</button><button data-act="iview" data-v="general">Genel</button></div>
+    <div class="seg" id="iSeg"><button data-act="iview" data-v="hood">Kaput</button><button data-act="iview" data-v="under">Alt<span class="lng"> Takım</span></button><button data-act="iview" data-v="general">Genel</button></div>
+    <span class="iclock mono" id="iClock"></span>
     <button class="btn sm" data-act="notes" id="iNotes">Notlar</button>
   </div>
   <div class="iwork" id="iWork" hidden><span id="iWorkT">Usta çalışıyor…</span><div class="bar"><i id="iWorkBar"></i></div></div>
@@ -347,7 +390,7 @@ body.inspecting #toast{bottom:auto;top:calc(env(safe-area-inset-top,0px) + 190px
     <div class="modes" id="modes"></div>
     <div class="startrow">
       <label for="coName">İşletme adı<input type="text" id="coName" maxlength="24" value="Zero Oto" autocomplete="off"></label>
-      <button class="btn pri huge" id="startBtn">BAŞLA</button>
+      <button class="btn pri huge" id="startBtn">YENİ OYUN</button>
     </div>
     <div class="feat">
       <div><b>Elle teşhis</b>Kaputu aç, lifte kaldır, parçalara dokunup kontrol et ve ölç.</div>
@@ -409,6 +452,8 @@ const SYM = {
   ac_warm:      'Klima soğutmuyor.',
   service_due:  'Periyodik bakım zamanı geldi.',
   tire_worn:    'Lastikler aşınmış, değiştirilmesini istiyorum.',
+  no_start:     'Araç hiç çalışmıyor, çekiciyle getirttim.',
+  came_back:    'Geçen sefer yaptırdım ama sorun devam ediyor!',
   tire_slip:    'Yağmurda araç kayıyor.',
 };
 
@@ -575,6 +620,68 @@ const GOAL_POOL = [
   { type: 'sell', n: [1, 1], txt: () => `Galeriden bir araç sat`, reward: () => 8000, galeri: true },
   { type: 'errand', n: [1, 2], txt: n => `${n} kez parça temin et`, reward: () => 2000 },
 ];
+const TOW_FAULTS = ['starter', 'battery_weak', 'fuel_pump', 'timing_belt'];
+const TOW_FEE = 3500;   // müşteri çekici ücretini fatura ile öder (sana kalır)
+// ================= GARAGE ZERO — SESLER (WebAudio sentez) =================
+const SFX = {
+  ctx: null, master: null, last: {},
+  on() { return !S || !S.settings || S.settings.sound !== false; },
+  init() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.master = this.ctx.createGain(); this.master.gain.value = 0.5; this.master.connect(this.ctx.destination);
+    } catch (e) { this.ctx = null; }
+  },
+  ok(name, gap = 0.15) {
+    if (!this.ctx || !this.on()) return false;
+    const t = this.ctx.currentTime;
+    if (this.last[name] && t - this.last[name] < gap) return false;
+    this.last[name] = t; return true;
+  },
+  tone(freq, dur, { type = 'sine', vol = 0.3, at = 0, slide = 0, attack = 0.005 } = {}) {
+    const c = this.ctx, t = c.currentTime + at;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + attack); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master); o.start(t); o.stop(t + dur + 0.05);
+  },
+  noise(dur, { vol = 0.25, at = 0, freq = 2000, q = 1, type = 'bandpass' } = {}) {
+    const c = this.ctx, t = c.currentTime + at, n = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = buf; f.type = type; f.frequency.value = freq; f.Q.value = q; g.gain.value = vol;
+    s.connect(f); f.connect(g); g.connect(this.master); s.start(t);
+  },
+  ring() { if (!this.ok('ring', 2)) return; for (let r = 0; r < 2; r++) for (let i = 0; i < 8; i++) { this.tone(880, 0.05, { type: 'square', vol: 0.06, at: r * 0.7 + i * 0.06 }); this.tone(660, 0.05, { type: 'square', vol: 0.05, at: r * 0.7 + i * 0.06 + 0.03 }); } },
+  cash() { if (!this.ok('cash', 0.4)) return; this.noise(0.08, { vol: 0.2, freq: 3000 }); this.tone(1320, 0.18, { type: 'triangle', vol: 0.18, at: 0.05 }); this.tone(1760, 0.35, { type: 'triangle', vol: 0.15, at: 0.12 }); },
+  clink() { if (!this.ok('clink', 0.25)) return; const f = 2200 + Math.random() * 1600; this.tone(f, 0.12, { type: 'triangle', vol: 0.05 }); this.tone(f * 1.5, 0.08, { type: 'sine', vol: 0.03 }); },
+  ratchet() { if (!this.ok('ratchet', 0.6)) return; for (let i = 0; i < 6; i++) this.noise(0.025, { vol: 0.12, at: i * 0.05, freq: 3500, q: 4 }); },
+  impact() { if (!this.ok('impact', 0.8)) return; this.tone(180, 0.45, { type: 'sawtooth', vol: 0.05, slide: 60 }); this.noise(0.45, { vol: 0.07, freq: 1200, q: 2 }); },
+  horn() { if (!this.ok('horn', 1)) return; this.tone(392, 0.22, { type: 'sawtooth', vol: 0.06 }); this.tone(494, 0.22, { type: 'sawtooth', vol: 0.05 }); },
+  click() { if (!this.ok('click', 0.3)) return; this.noise(0.03, { vol: 0.3, freq: 1500, q: 3 }); this.noise(0.03, { vol: 0.25, freq: 1500, q: 3, at: 0.35 }); },
+  engine(bad) {
+    if (!this.ok('engine', 1.5)) return;
+    const c = this.ctx, t = c.currentTime;
+    // marş
+    for (let i = 0; i < (bad ? 9 : 5); i++) this.tone(70, 0.09, { type: 'sawtooth', vol: 0.08, at: i * 0.11 });
+    // çalışma
+    const st = bad ? 1.0 : 0.55;
+    const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain(), lfo = c.createOscillator(), lg = c.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(38, t + st); o.frequency.linearRampToValueAtTime(70, t + st + 0.35); o.frequency.linearRampToValueAtTime(42, t + st + 1.6);
+    f.type = 'lowpass'; f.frequency.value = 380;
+    lfo.frequency.value = bad ? 5 : 18; lg.gain.value = bad ? 0.07 : 0.02; lfo.connect(lg); lg.connect(g.gain);
+    g.gain.setValueAtTime(0.0001, t + st); g.gain.exponentialRampToValueAtTime(0.12, t + st + 0.1); g.gain.setValueAtTime(0.12, t + st + 1.5); g.gain.exponentialRampToValueAtTime(0.0001, t + st + 2.2);
+    o.connect(f); f.connect(g); g.connect(this.master); o.start(t + st); lfo.start(t + st); o.stop(t + st + 2.3); lfo.stop(t + st + 2.3);
+  },
+  beep() { if (!this.ok('beep', 0.6)) return; this.tone(1000, 0.12, { type: 'square', vol: 0.04 }); this.tone(1000, 0.12, { type: 'square', vol: 0.04, at: 0.25 }); },
+  ding() { if (!this.ok('ding', 0.3)) return; this.tone(1046, 0.4, { type: 'sine', vol: 0.12 }); this.tone(1568, 0.5, { type: 'sine', vol: 0.08, at: 0.08 }); },
+  bad() { if (!this.ok('bad', 0.5)) return; this.tone(300, 0.25, { type: 'triangle', vol: 0.1, slide: -120 }); },
+};
+document.addEventListener('pointerdown', () => SFX.init(), { passive: true });
+document.addEventListener('keydown', () => SFX.init());
 // ================= GARAGE ZERO — OYUN MANTIĞI =================
 let S = null;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -644,6 +751,7 @@ function genJob() {
   else c = genCar(L, Math.random() < 0.6 ? 1 : ri(1, L >= 4 ? 3 : L >= 2 ? 2 : 1));
   c.owner = 'customer'; c.sym = symptomsOf(c); c.clean = Math.random() < 0.5;
   c.cust = { name: pick(NAMES), deadline: S.day + ri(0, 2) };
+  if (c.faults.some(f => TOW_FAULTS.includes(f)) && Math.random() < 0.55) { c.tow = true; c.sym.unshift('no_start'); }
   return c;
 }
 function genListing() {
@@ -675,7 +783,7 @@ function newGame(mode, name) {
     v: 3, name: (name || 'Garage Zero').trim().slice(0, 24) || 'Garage Zero', mode, cash: m.cash, day: 1, minute: 0, rep: 30, xp: 0, speed: 1,
     bays: m.bays, lot: m.lot, tools: {}, up: {}, lic: Object.assign({}, m.lic), cars: [], jobs: [], market: [], log: [], events: [],
     staff: [], cands: [], stock: {}, errands: [], orders: [], appReq: [], appts: [],
-    reviews: [], pendingReviews: [], goals: [], history: [], laborRate: 2500, adUntil: 0,
+    reviews: [], pendingReviews: [], goals: [], history: [], laborRate: 2500, adUntil: 0, warranty: [],
     settings: { carStyle: 'modern' }, today: { inc: 0, exp: 0, inv: 0, ev: [] }, stats: { jobs: 0, sold: 0, bought: 0, profit: 0, earned: 0 }, idc: 1,
   };
   m.tools.forEach(t => S.tools[t] = true);
@@ -707,6 +815,7 @@ function scheduleDay(first) {
     const calls = Math.max(1, Math.min(7, 2 + Math.floor(S.rep / 30) + (ad ? 1 : 0) + (R < 3 ? -1 : 0)));
     for (let i = 0; i < calls; i++) S.events.push({ at: first && i === 0 ? 20 : ri(5, 470), type: 'call' });
     S.appts.filter(a => a.day === S.day).forEach(a => S.events.push({ at: a.at, type: 'appt', id: a.id }));
+    (S.warranty || []).filter(w => w.day === S.day).forEach(w => S.events.push({ at: ri(15, 300), type: 'warranty', id: w.id }));
   }
   S.cars.filter(c => c.listed).forEach(c => scheduleBuyers(c));
   S.events.sort((a, b) => a.at - b.at);
@@ -745,14 +854,14 @@ function fireEvent(e) {
   if (e.type === 'cust') {
     const j = genJob();
     if (!arrive(j, ri(110, 200))) { if (e.at + 30 < DAY_MIN - 60) addEvent(Object.assign(e, { at: e.at + 30 })); return; }
-    UI.toast(`Kapıya müşteri geldi: ${j.cust.name} — ${MODELS[j.model].name}`, 'info');
+    UI.toast(j.tow ? `Çekici geliyor: ${j.cust.name} — ${MODELS[j.model].name} çalışmıyor` : `Kapıya müşteri geldi: ${j.cust.name} — ${MODELS[j.model].name}`, 'info');
     log(`${j.cust.name} ${MODELS[j.model].name} ile kapıya geldi.`);
   }
   if (e.type === 'call') {
     const j = genJob();
     let day = S.day + (Math.random() < 0.45 ? 0 : ri(1, 2)), at = Math.round(ri(20, 470) / 15) * 15;
     if (day === S.day && at < S.minute + 45) { at = Math.round((S.minute + ri(60, 150)) / 15) * 15; if (at > 480) { day++; at = ri(2, 20) * 15; } }
-    S.appReq.push({ id: 'r' + (S.idc++), job: j, day, at, expires: S.minute + 90 });
+    S.appReq.push({ id: 'r' + (S.idc++), job: j, day, at, expires: S.minute + 90 }); SFX.ring();
     UI.toast(`Telefon: ${j.cust.name} ${day === S.day ? 'bugün' : day === S.day + 1 ? 'yarın' : 'öbür gün'} ${clock(at)} için randevu istiyor.`, 'info');
     UI.render();
   }
@@ -763,6 +872,13 @@ function fireEvent(e) {
     S.appts = S.appts.filter(x => x !== a);
     UI.toast(`Randevulu müşteri geldi: ${a.job.cust.name}`, 'ok');
     log(`${a.job.cust.name} randevusuna zamanında geldi.`);
+  }
+  if (e.type === 'warranty') {
+    const w = (S.warranty || []).find(x => x.id === e.id); if (!w) return;
+    if (!arrive(w.job, ri(150, 220))) { addEvent(Object.assign(e, { at: e.at + 20 })); return; }
+    S.warranty = S.warranty.filter(x => x !== w);
+    UI.toast(`${w.job.cust.name} geri geldi: “Sorun devam ediyor!” (garanti)`, 'bad'); SFX.bad();
+    log(`${w.job.cust.name} garanti için geri geldi.`, 'bad');
   }
   if (e.type === 'buyer') {
     const c = carById(e.car);
@@ -840,11 +956,12 @@ function processWorker(w, dm) {
       t._rt.arrived = true; n.face(sp.look[0], sp.look[1]); n.state = t.type === 'clean' ? 'sweep' : sp.pose;
       const h = S.staff.find(x => x.role === 'cirak' && x.bay != null && x.bay === w.bay && !x.errand), hn = h && WNPC[h.id];
       if (hn && t.type !== 'gtest') { const hp = ustaSpot(c, 'door'); hn.root.visible = true; hn.speed = 2.4; hn.go(walkPath(hn.root.position, hp.pos), () => { hn.face(hp.look[0], hp.look[1]); hn.state = 'work'; }); }
-      if (t.type === 'gtest' && t.test === 'drive') { n.root.visible = false; testDriveCar(c.id, () => { t._rt.driveDone = true; }); }
+      if (t.type === 'gtest' && t.test === 'drive') { SFX.engine(false); n.root.visible = false; testDriveCar(c.id, () => { t._rt.driveDone = true; }); }
     });
     return;
   }
   if (!t._rt.arrived) return;
+  if (dm > 0) { const now = performance.now(); if (now - (t._rt.snd || 0) > (t.type === 'part' ? 1400 : 2200)) { t._rt.snd = now; if (t.type === 'part') (S.up.impact && Math.random() < 0.5 ? SFX.impact() : SFX.ratchet()); else if (t.type === 'look' || t.type === 'meas' || t.type === 'overview') SFX.clink(); } }
   t.left -= dm * workRate(w, t);
   if (t.left > 0) return;
   if (t.type === 'gtest' && t.test === 'drive' && !t._rt.driveDone) return;
@@ -868,7 +985,9 @@ function completeTask(w, t, c) {
     const r = globalResult(c, t.test);
     c.findings[t.test] = { res: r.res, ab: r.ab, day: S.day }; addXP(2);
     UI.toast(`${who} · ${GLOBAL_TESTS[t.test].name}: ${r.res[0]}`, r.ab ? 'warn' : 'ok');
+    if (t.test === 'obd') SFX.beep();
     if (t.test === 'start') {
+      if (c.faults.includes('starter')) SFX.click(); else SFX.engine(c.faults.some(f => ['spark_plug', 'coil', 'engine_mount', 'battery_weak', 'fuel_pump', 'timing_belt'].includes(f)));
       const smoke = c.faults.includes('head_gasket');
       if (!c.faults.includes('starter')) puff(c.id, smoke ? 0xf4f4f4 : 0x8d9399, smoke ? 12 : 4);
       const m = G.carMeshes[c.id]; if (m) { let k = 0; const iv = setInterval(() => { m.rotation.z = (Math.random() - 0.5) * (c.faults.includes('engine_mount') ? 0.03 : 0.008); if (++k > 20) { clearInterval(iv); m.rotation.z = 0; } }, 50); }
@@ -989,12 +1108,12 @@ function processErrands(dm) {
     if (ok) {
       S.stock[e.part] = (S.stock[e.part] || 0) + e.qty;
       S.errands = S.errands.filter(x => x !== e);
-      UI.toast(`${name} döndü: ${FAULTS[e.part].part} ×${e.qty} depoda.`, 'ok'); goal('errand');
+      UI.toast(`${name} döndü: ${FAULTS[e.part].part} ×${e.qty} depoda.`, 'ok'); goal('errand'); SFX.ding();
       log(`${name} ${st.name}’dan ${FAULTS[e.part].part} getirdi.`, 'ok');
     } else {
       addMoney(Math.round(e.cost), `${FAULTS[e.part].part} iade (bulunamadı)`);
       e.status = 'fail';
-      UI.toast(`${name}: “${st.name}’da ${FAULTS[e.part].part} yokmuş!” Başka yere gönder.`, 'bad');
+      UI.toast(`${name}: “${st.name}’da ${FAULTS[e.part].part} yokmuş!” Başka yere gönder.`, 'bad'); SFX.bad();
       log(`${st.name}’da ${FAULTS[e.part].part} bulunamadı.`, 'bad');
     }
     if (runner) {
@@ -1026,6 +1145,7 @@ const Life = {
     if (this.cust[car.id]) return;
     car._custSpawned = true;
     const m = G.carMeshes[car.id]; if (!m) return;
+    if (!car.tow) SFX.horn();
     const n = new NPC({ x: m.position.x - 1.2, z: m.position.z + 0.3 });
     n.go([[m.position.x + 1.5, APRON_Z + 1.5], [m.position.x + 0.3, APRON_Z + 3.4]], () => { n.face(0, APRON_Z + 3.4); n.state = 'talk'; });
     this.cust[car.id] = n;
@@ -1116,7 +1236,7 @@ function acceptJob(id) {
   Life.toBench(j.id);
   UI.selected = j.id; syncScene(); UI.openCar(j.id, 'info'); save();
 }
-function rejectJob(id) { const j = jobById(id); if (!j) return; if (j.appt && Math.random() < 0.7) addReview(j.cust.name, 1, REVIEW_TXT[1][1]); jobLeaves(j, null, j.appt ? -3 : 0); UI.render(); }
+function rejectJob(id) { const j = jobById(id); if (!j) return; if (j.warranty) { addRep(-5); addReview(j.cust.name, 1, 'Garanti kapsamındaki aracımı geri çevirdiler. Rezalet.'); } else if (j.appt && Math.random() < 0.7) addReview(j.cust.name, 1, REVIEW_TXT[1][1]); jobLeaves(j, null, j.appt ? -3 : 0); UI.render(); }
 function jobLeaves(j, why, rep) {
   S.jobs = S.jobs.filter(x => x !== j);
   if (rep) addRep(rep);
@@ -1164,7 +1284,9 @@ function deliver(id) {
   const parts = correct.reduce((s, f) => s + FAULTS[f].cost, 0) * PART_MARKUP;
   const labor = correct.reduce((s, f) => s + FAULTS[f].labor, 0) / 60 * S.laborRate;
   const tested = Object.keys(c.findings).length;
-  let payN = Math.round(parts + labor), lines = [], repD = 0;
+  let payN = Math.round(parts + labor + (c.tow ? TOW_FEE : 0)), lines = [], repD = 0;
+  if (c.tow) lines.push(`Çekici ücreti faturaya eklendi: ${fmt(TOW_FEE)}`);
+  if (c.warranty) { payN = 0; lines.push('Garanti işi — ücret alınmadı.'); }
   if (correct.length) lines.push(`Doğru onarım: ${correct.map(f => FAULTS[f].part).join(', ')}`);
   if (wasted.length) { lines.push(`Gereksiz değişen parça: ${wasted.map(f => FAULTS[f].part).join(', ')} — müşteri ödemedi.`); repD -= wasted.length; }
   if (remaining.length) {
@@ -1175,11 +1297,22 @@ function deliver(id) {
     if (S.rep > 60) { const tip = Math.round(payN * 0.05); payN += tip; lines.push(`Memnun müşteri bahşiş bıraktı: ${fmt(tip)}`); }
     addXP(10); S.stats.jobs++;
   }
-  addMoney(payN, `${c.cust.name} — ${MODELS[c.model].name}`); S.stats.earned += payN; addRep(repD);
+  if (c.warranty) { if (remaining.length) { repD -= 4; lines.push('Garantiye rağmen sorun çözülmedi!'); } else { repD += 4; lines.push('Garanti işi düzgün kapandı, müşteri gönlü alındı.'); } }
+  else if (remaining.length) {
+    const back = JSON.parse(JSON.stringify(c));
+    Object.assign(back, { id: uid(), fixed: [], wasted: [], findings: {}, hints: [], bay: null, lot: null, apron: null, lifted: false, hoodOpen: false, warranty: true, appt: false, tow: false, waitedLong: false, _custSpawned: false });
+    back.sym = ['came_back'].concat(symptomsOf(back)); back.cust = { name: c.cust.name, deadline: 0 };
+    const day = S.day + ri(1, 2); back.cust.deadline = day + 1;
+    S.warranty = S.warranty || []; S.warranty.push({ id: 'g' + (S.idc++), day, job: back });
+    lines.push(`${c.cust.name} sorun sürerse garanti için geri gelecek.`);
+  }
+  if (payN > 0) addMoney(payN, `${c.cust.name} — ${MODELS[c.model].name}`); S.stats.earned += payN; addRep(repD);
+  if (remaining.length) SFX.bad(); else SFX.cash();
   goal('income', payN); if (!remaining.length) goal('deliver');
   { // müşteri yorumu
     let st = 5, txt;
-    if (remaining.length) { st = correct.length ? 2 : 1; txt = st === 2 ? REVIEW_TXT[2][0] : REVIEW_TXT[1][0]; }
+    if (c.warranty) { st = remaining.length ? 1 : 4; txt = remaining.length ? 'İki kez getirdim, hâlâ düzelmedi!' : 'İlk seferde olmadı ama garanti kapsamında ücretsiz düzelttiler.'; }
+    else if (remaining.length) { st = correct.length ? 2 : 1; txt = st === 2 ? REVIEW_TXT[2][0] : REVIEW_TXT[1][0]; }
     else {
       st -= wasted.length; if (c.waitedLong) st -= 1;
       if (S.laborRate >= 3500 && Math.random() < 0.6) { st -= 1; txt = REVIEW_TXT[3][0]; } else if (S.laborRate >= 3000 && Math.random() < 0.3) { st -= 1; txt = REVIEW_TXT[3][0]; }
@@ -1241,7 +1374,7 @@ function unlist(id) { const c = carById(id); c.listed = null; S.events = S.event
 function sellCar(c, amount, buyer, npc) {
   addMoney(amount, `${MODELS[c.model].name} satıldı`, true);
   const profit = amount - c.buy - c.spent;
-  S.stats.sold++; S.stats.profit += profit; goal('sell');
+  S.stats.sold++; S.stats.profit += profit; goal('sell'); SFX.cash();
   if (c.faults.length) S.pendingReviews.push({ day: S.day + ri(1, 2), name: buyer, stars: 2, text: `Aldığım ${MODELS[c.model].name} aracından ${FAULTS[c.faults[0]].part.toLowerCase()} arızası çıktı. Galeri söylemedi.`, kind: 'galeri', rep: -3 });
   else if (Math.random() < 0.45) S.pendingReviews.push({ day: S.day + 1, name: buyer, stars: 5, text: `${MODELS[c.model].name} aldım, tertemiz çıktı. Dürüst galeri.`, kind: 'galeri', rep: 2 });
   addXP(25 + Math.max(0, Math.round(profit / 8000))); if (profit > 0) addRep(2);
@@ -1346,7 +1479,7 @@ function goal(type, amt = 1) {
   (S.goals || []).forEach(g => {
     if (g.done || g.type !== type) return;
     g.p = Math.min(g.n, g.p + amt);
-    if (g.p >= g.n) { g.done = true; addMoney(g.reward, `Günlük hedef: ${g.txt}`); addXP(20); UI.toast(`Hedef tamam: ${g.txt} (+${fmt(g.reward)})`, 'ok'); log(`Günlük hedef tamamlandı: ${g.txt}.`, 'ok'); }
+    if (g.p >= g.n) { g.done = true; SFX.ding(); addMoney(g.reward, `Günlük hedef: ${g.txt}`); addXP(20); UI.toast(`Hedef tamam: ${g.txt} (+${fmt(g.reward)})`, 'ok'); log(`Günlük hedef tamamlandı: ${g.txt}.`, 'ok'); }
   });
 }
 // ================= GARAGE ZERO — ARAÇ MODELLERİ =================
@@ -1950,7 +2083,7 @@ const LOT_Z = 4.5;
 const G = {
   renderer: null, scene: null, camera: null, sun: null, hemi: null,
   cam: { yaw: 0.35, pitch: 0.8, dist: 34, target: new THREE.Vector3(6, 0, 4), tYaw: 0.35, tPitch: 0.8, tDist: 34, tTarget: new THREE.Vector3(6, 0, 4), minP: 0.2, maxP: 1.35 },
-  carMeshes: {}, bays: [], lotMarks: [], ring: null, raycaster: new THREE.Raycaster(), clock: new THREE.Clock(), puffs: [],
+  carMeshes: {}, trucks: [], bays: [], lotMarks: [], ring: null, raycaster: new THREE.Raycaster(), clock: new THREE.Clock(), puffs: [],
 };
 
 function mat(color, opts = {}) { return new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.75, metalness: 0.05 }, opts)); }
@@ -2062,6 +2195,13 @@ function buildShop() {
   G.lotSignMat = new THREE.MeshBasicMaterial({ map: labelTexture(['GALERİ', 'ruhsat gerekli']) });
   const ls = new THREE.Mesh(new THREE.BoxGeometry(5, 1.25, 0.12), G.lotSignMat); ls.position.set(27.7, 2.9, 10.25); s.add(ls);
   [25.6, 29.8].forEach(x => { const p = cyl(0.07, 0.07, 2.3, 6, poleM); p.position.set(x, 1.15, 10.25); s.add(p); });
+  // boya kabini (Mağaza'dan alınınca görünür)
+  const booth = new THREE.Group(); booth.position.set(21.5, 0, -6.8); s.add(booth); G.booth = booth; booth.visible = false;
+  const bw = box(8, 3.6, 5, mat(0xe6e2d8)); bw.position.y = 1.8; booth.add(bw);
+  const broof = box(8.4, 0.25, 5.4, mat(0x3b4148, { metalness: 0.4 })); broof.position.y = 3.72; booth.add(broof);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(5.6, 2.9), new THREE.MeshStandardMaterial({ color: 0x9fc4d8, metalness: 0.4, roughness: 0.15, emissive: 0xeaf2ff, emissiveIntensity: 0.35 })); door.position.set(0, 1.5, 2.52); booth.add(door);
+  const bsignM = new THREE.MeshBasicMaterial({ map: labelTexture(['BOYA KABİNİ', 'fırınlı']) }); const bs = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 0.9), bsignM); bs.position.set(0, 3.15, 2.53); booth.add(bs);
+  const duct = cyl(0.35, 0.35, 1.6, 10, mat(0x9aa0a6, { metalness: 0.7 })); duct.position.set(-2.8, 4.5, -1); booth.add(duct);
   // galeri ofisi (küçük cam kabin)
   const office = new THREE.Group(); office.position.set(37.5, 0, -1.5); s.add(office);
   const ob = box(4, 2.8, 3, mat(0xe6e2d8)); ob.position.y = 1.4; office.add(ob);
@@ -2138,8 +2278,10 @@ function syncScene() {
     if (!m) {
       m = buildCar(car); m.userData.sig = sig; G.scene.add(m); G.carMeshes[car.id] = m;
       if (car._noAnim) { m.position.set(slot.x, 0, slot.z); m.rotation.y = Math.PI; m.userData.slotKey = slot.key; delete car._noAnim; }
+      else if (car.tow && car.apron != null) { towIn(car, m, slot); return; }
       else { m.position.set(-75, 0, LANE_E); m.rotation.y = Math.PI / 2; }
     }
+    if (m.userData.towing) return;
     if (m.userData.slotKey !== slot.key && !m.userData.testDrive) {
       if (m.userData.y > 0.05) { m.userData.tY = 0; }
       driveCar(m, routeTo(m.position, slot), 7, () => { if (car.apron != null && car.owner === 'customer' && !car._custSpawned) Life.customerArrived(car); });
@@ -2159,6 +2301,7 @@ function syncScene() {
     b.tLiftY = car && car.lifted ? 1.55 : 0;
   });
   G.lotMarks.forEach((m, i) => { m.visible = i < S.lot; });
+  if (G.booth) G.booth.visible = !!S.up.paint;
   const lotTxt = S.lic.galeri ? ['GALERİ', S.name.toUpperCase().slice(0, 22)] : ['GALERİ', 'ruhsat gerekli'];
   if (G.lotSignMat.userData.txt !== lotTxt.join()) { G.lotSignMat.map = labelTexture(lotTxt); G.lotSignMat.needsUpdate = true; G.lotSignMat.userData.txt = lotTxt.join(); }
   const signTxt = S.name.toUpperCase().slice(0, 18);
@@ -2217,7 +2360,7 @@ function focusCar(id, view) {
   if (view === 'hood' && m) {
     const I = m.userData.info;
     c.tTarget.copy(m.localToWorld(new THREE.Vector3(0, I.yT + 0.15, I.f0 + I.hoodLen * 0.5)));
-    c.tYaw = h + 0.25; c.tPitch = 0.75; c.tDist = 3.6; c.minP = 0.1; c.maxP = 1.4;
+    c.tYaw = h + 0.25; c.tPitch = 0.8; c.tDist = window.innerWidth <= 760 ? 3.1 : 3.6; c.minP = 0.1; c.maxP = 1.4;
   } else if (view === 'under' && m) {
     c.tTarget.copy(m.position).add(new THREE.Vector3(0, 1.45, 0));
     c.tYaw = h + Math.PI / 2 + 0.35; c.tPitch = -0.42; c.tDist = 3.6; c.minP = -0.75; c.maxP = 0.6;
@@ -2279,6 +2422,15 @@ function pickAt(x, y) {
 function resize() {
   const w = window.innerWidth, h = window.innerHeight;
   G.renderer.setSize(w, h, false); G.camera.aspect = w / h; G.camera.updateProjectionMatrix();
+  applyViewOffset();
+  if (UI.inspect) UI.renderInspect();
+}
+// dikey telefonda inceleme sırasında görüntüyü yukarı kaydır (alt panel aracı örtmesin)
+function applyViewOffset() {
+  if (!G.camera) return;
+  const w = window.innerWidth, h = window.innerHeight;
+  if (UI.inspect && w <= 760 && h > w) G.camera.setViewOffset(w, h, 0, h * 0.17, w, h);
+  else G.camera.clearViewOffset();
 }
 
 const _v = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
@@ -2292,6 +2444,7 @@ function loop() {
 
   Object.values(G.carMeshes).forEach(m => {
     const u = m.userData;
+    if (u.towing) return;
     if (u.path && u.path.length) {
       if (u.y > 0.03) { u.y += (0 - u.y) * k * 0.5; m.position.y = u.y; return; }   // önce lifti indir
       const tgt = u.path[0], dx = tgt.x - m.position.x, dz = tgt.z - m.position.z, dist = Math.hypot(dx, dz);
@@ -2319,11 +2472,58 @@ function loop() {
   G.ring.visible = !!sel;
   if (sel) { G.ring.position.x = sel.position.x; G.ring.position.z = sel.position.z; G.ring.material.opacity = 0.55 + Math.sin(t * 4) * 0.3; }
 
+  G.trucks.slice().forEach(tr => moveTruck(tr, dt));
   NPCS.slice().forEach(n => n.update(dt));
   updateTraffic(dt);
   if (S && UI.started) { gameTick(dt); updateDaylight(S.minute / dayMinutes()); }
   G.renderer.render(G.scene, G.camera);
   UI.frame();
+}
+
+// ---------- çekici ----------
+function buildTowTruck() {
+  const g = new THREE.Group();
+  const red = umat(0xd6a01d, { metalness: 0.3, roughness: 0.5 }), dark = cmat(0x1d2024), glass = cmat(0x1c2836, { metalness: 0.7, roughness: 0.1 });
+  const chassis = box(2.1, 0.35, 7.4, dark); chassis.position.set(0, 0.75, 0); g.add(chassis);
+  const cab = box(2.2, 1.6, 1.9, red); cab.position.set(0, 1.7, 2.55); g.add(cab);
+  const ws = box(2.0, 0.7, 0.05, glass); ws.position.set(0, 2.05, 3.51); g.add(ws);
+  [-1, 1].forEach(sx => { const sw = box(0.05, 0.6, 1.0, glass); sw.position.set(sx * 1.11, 2.05, 2.7); g.add(sw); });
+  const bed = box(2.3, 0.14, 5.0, cmat(0x6a6f75, { metalness: 0.6 })); bed.position.set(0, 1.0, -1.0); g.add(bed);
+  [-1, 1].forEach(sx => { const rail = box(0.08, 0.18, 5.0, cmat(0xb8322a)); rail.position.set(sx * 1.12, 1.14, -1.0); g.add(rail); });
+  const beacon = box(0.9, 0.14, 0.25, new THREE.MeshStandardMaterial({ color: 0xff8a1f, emissive: 0xff7a00, emissiveIntensity: 1 })); beacon.position.set(0, 2.57, 2.55); g.add(beacon);
+  const tireM = cmat(0x131313, { roughness: 0.9 });
+  [[2.6], [-1.4], [-2.6]].forEach(([z]) => [-1, 1].forEach(sx => { const w = cyl(0.45, 0.45, 0.35, 16, tireM); w.rotation.z = Math.PI / 2; w.position.set(sx * 1.0, 0.45, z); g.add(w); }));
+  g.userData.beacon = beacon;
+  return g;
+}
+function moveTruck(tr, dt) {
+  const u = tr.userData;
+  u.beacon.material.emissiveIntensity = 0.5 + Math.abs(Math.sin(G.clock.elapsedTime * 6));
+  if (!u.path || !u.path.length) return;
+  const tgt = u.path[0], dx = tgt[0] - tr.position.x, dz = tgt[1] - tr.position.z, dist = Math.hypot(dx, dz);
+  const step = u.speed * dt * Math.min(1, 0.3 + dist / 4);
+  if (dist <= step) { tr.position.x = tgt[0]; tr.position.z = tgt[1]; u.path.shift(); if (!u.path.length) { const cb = u.cb; u.cb = null; cb && cb(); } return; }
+  tr.position.x += dx / dist * step; tr.position.z += dz / dist * step;
+  let a = Math.atan2(dx, dz), d = a - tr.rotation.y; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+  tr.rotation.y += d * Math.min(1, dt * 4);
+}
+function towIn(car, m, slot) {
+  const tr = buildTowTruck(); tr.position.set(-80, 0, LANE_E); tr.rotation.y = Math.PI / 2; G.scene.add(tr); G.trucks.push(tr);
+  m.userData.towing = true; m.userData.slotKey = slot.key;
+  m.position.set(0, 1.07, -1.0); m.rotation.set(0, 0, 0); tr.add(m);
+  tr.userData.speed = 9;
+  tr.userData.path = [[slot.x + 1, LANE_E]];
+  tr.userData.cb = () => {
+    SFX.beep();
+    setTimeout(() => {
+      const wp = new THREE.Vector3(); m.getWorldPosition(wp);
+      tr.remove(m); G.scene.add(m); m.position.copy(wp); m.rotation.y = tr.rotation.y;
+      m.userData.towing = false; m.userData.y = wp.y; m.userData.tY = 0;
+      driveCar(m, [[slot.x, CURB_Z], [slot.x, slot.z]], 3, () => { if (!car._custSpawned && car.apron != null) Life.customerArrived(car); });
+      syncScene();
+      setTimeout(() => { tr.userData.speed = 10; tr.userData.path = [[95, LANE_E]]; tr.userData.cb = () => { G.scene.remove(tr); G.trucks.splice(G.trucks.indexOf(tr), 1); }; }, 1500);
+    }, 900);
+  };
 }
 // ================= GARAGE ZERO — ARAYÜZ =================
 const $ = s => document.querySelector(s);
@@ -2359,7 +2559,7 @@ const UI = {
     }
     $('#startBtn').addEventListener('click', () => {
       const go = () => { newGame(chosen, $('#coName').value); UI.enterGame(true); };
-      if (sv) UI.modal('Yeni oyun?', '<p>Kayıtlı oyunun silinecek.</p>', [{ t: 'Vazgeç' }, { t: 'Yeni oyuna başla', cls: 'pri', fn: go }]); else go();
+      if (sv) UI.modal('Yeni oyun başlatılsın mı?', `<p>“${esc(sv.name)}” kaydı (Gün ${sv.day}) silinip yerine yeni oyun başlayacak.</p>`, [{ t: 'Vazgeç' }, { t: 'Sil ve yeni oyuna başla', cls: 'pri', fn: () => { wipeSave(); go(); } }]); else go();
     });
   },
   enterGame(fresh) {
@@ -2381,6 +2581,7 @@ const UI = {
       case 'close': UI.closePanel(); break;
       case 'endday': UI.confirmEndDay(); break;
       case 'speed': S.speed = +d.v; break;
+      case 'sound': S.settings.sound = S.settings.sound === false; SFX.init(); if (S.settings.sound) SFX.ding(); break;
       case 'accept': acceptJob(id); break;
       case 'reject': rejectJob(id); break;
       case 'open': UI.openCar(id); break;
@@ -2515,7 +2716,8 @@ const UI = {
     const fails = S.errands.filter(e => e.status === 'fail').length; $('#bDepot').hidden = !fails; $('#bDepot').textContent = fails;
     $('#dGallery').hidden = !S.lic.galeri && !S.cars.some(c => c.owner === 'me');
     $('#dStaff').hidden = $('#dDepot').hidden = !S.lic.servis;
-    document.querySelectorAll('#spd button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === S.speed));
+    document.querySelectorAll('#spd button[data-v]').forEach(b => b.setAttribute('aria-pressed', +b.dataset.v === S.speed));
+    const sb = $('#sndBtn'); if (sb) { const on = S.settings.sound !== false; sb.setAttribute('aria-pressed', 'false'); sb.style.opacity = on ? 1 : 0.45; $('#sndWave').style.display = on ? '' : 'none'; }
     const now = performance.now(); if (now - (UI._lu || 0) > 400) { UI._lu = now; UI.updateLifts(); }
   },
   carMeta(c) {
@@ -2528,6 +2730,7 @@ const UI = {
     const left = j.cust.deadline - S.day;
     const html = `<div class="sec">Müşteri şikayeti</div><div class="card"><div class="row sp"><span class="title">${esc(j.cust.name)}</span><span class="chip ${left <= 0 ? 'bad' : 'warn'}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün içinde'}</span></div>
       <ul class="complaint">${j.sym.map(s => `<li>${SYM[s]}</li>`).join('')}</ul>
+      ${j.warranty ? '<div class="note">Garanti işi: Daha önce teslim ettiğin araç, sorun sürüyor. Ücret alınmaz; reddedersen itibar ve puan kaybedersin.</div>' : ''}${j.tow ? `<div class="note">Araç çalışmıyor, çekiciyle geldi. Çekici ücreti (${fmt(TOW_FEE)}) faturaya eklenir.</div>` : ''}
       <span class="meta">Kapıda bekliyor · ${j.leaveAt ? Math.max(0, Math.round(j.leaveAt - S.minute)) + ' dk sabrı kaldı' : ''}</span></div>
       <div class="btns" style="margin-top:12px"><button class="btn" data-act="reject" data-id="${j.id}">Reddet</button><button class="btn pri" data-act="accept" data-id="${j.id}" ${freeBay() < 0 ? 'disabled' : ''}>${freeBay() < 0 ? 'Boş lift yok' : 'Kabul et, içeri al'}</button></div>`;
     return { title: MODELS[j.model].name, sub: UI.carMeta(j), html };
@@ -2544,7 +2747,7 @@ const UI = {
     if (!rows.length) return '';
     return rows.map(([k, f]) => {
       const [kind, comp] = k.split(':');
-      const label = comp ? `${COMPS[comp].name} · ${kind === 'meas' ? 'ölçüm' : 'gözle'}` : GLOBAL_TESTS[k].name;
+      const label = comp ? `${COMPS[comp].name} · ${kind === 'meas' ? 'ölçüm' : 'gözle'}` : k === 'overview' ? 'Ustanın genel kontrolü' : (GLOBAL_TESTS[k] || { name: k }).name;
       return `<div class="res ${f.ab ? 'ab' : ''}"><span class="lbl">${label}${f.stale ? ' · onarım öncesi' : ''}</span>${f.res.map(esc).join('<br>')}</div>`;
     }).join('');
   },
@@ -2598,13 +2801,13 @@ const UI = {
     const c = carById(id); if (!c) return;
     UI.closePanel(true); UI.selected = id;
     UI.inspect = { id, view: null, comp: null };
-    $('#insp').hidden = false; $('#dock').hidden = true; document.body.classList.add('inspecting');
+    $('#insp').hidden = false; $('#dock').hidden = true; document.body.classList.add('inspecting'); setTimeout(applyViewOffset, 0);
     UI.setView(view === 'under' && c.bay == null ? 'hood' : view);
   },
   exitInspect() {
     if (!UI.inspect) return;
     const id = UI.inspect.id; highlightComp(id, null, false);
-    UI.inspect = null; $('#insp').hidden = true; $('#dock').hidden = false; document.body.classList.remove('inspecting'); $('#hots').innerHTML = ''; UI.hotEls = {};
+    UI.inspect = null; $('#insp').hidden = true; $('#dock').hidden = false; document.body.classList.remove('inspecting'); applyViewOffset(); $('#hots').innerHTML = ''; UI.hotEls = {};
     if (carById(id)) { focusCar(id); UI.openCar(id); } else focusHome();
   },
   setView(v) {
@@ -2622,9 +2825,12 @@ const UI = {
     const I = UI.inspect; if (!I) return;
     I.comp = comp; highlightComp(I.id, comp, true); UI.renderInspect();
   },
+  isCompact() { return window.innerWidth <= 760 || window.innerHeight <= 520; },
   renderInspect() {
     const I = UI.inspect; if (!I) return;
     const c = carById(I.id); if (!c) return UI.exitInspect();
+    if (UI.isCompact()) return UI.renderInspectCompact(I, c);
+    $('#iSheet').classList.remove('compact');
     $('#iName').textContent = MODELS[c.model].name;
     const w = workerFor(c);
     $('#iSub').textContent = (c.owner === 'customer' ? c.cust.name + ' · ' : '') + UI.carMeta(c) + (w ? ' · ' + wname(w) : ' · usta yok');
@@ -2680,6 +2886,56 @@ const UI = {
     }).join('')}</div>`;
     $('#iSheet').innerHTML = h;
   },
+  renderInspectCompact(I, c) {
+    const w = workerFor(c), sheet = $('#iSheet');
+    sheet.classList.add('compact');
+    $('#iName').textContent = MODELS[c.model].name;
+    $('#iSub').textContent = '';
+    document.querySelectorAll('#iSeg button').forEach(b => { b.setAttribute('aria-pressed', b.dataset.v === I.view); b.disabled = b.dataset.v === 'under' && c.bay == null; });
+    $('#iNotes').textContent = `Not ${Object.keys(c.findings).length}`;
+    const queued = tasksFor(c.id), qOf = pred => queued.some(x => pred(x.t));
+    let h = '';
+    if (!w) h += `<div class="note">${c.bay != null ? `Lift ${c.bay + 1}’de usta yok.` : 'Boşta usta yok.'} <button class="btn sm" data-act="panel" data-p="staff">Personel</button></div>`;
+    if (I.view === 'general') {
+      if (c.owner === 'customer') h += `<div class="ctxt">${c.sym.map(s => SYM[s]).join(' · ')}</div>`;
+      h += `<div class="gridb">`;
+      h += `<button class="btn ${c.findings.overview ? '' : 'pri'}" data-act="overview" ${qOf(t => t.type === 'overview') ? 'disabled' : ''}>Genel kontrol<small>${OVERVIEW_MIN} dk · ${w ? '★'.repeat(w.skill) : '—'}</small></button>`;
+      Object.entries(GLOBAL_TESTS).forEach(([t, T]) => {
+        const no = T.tool && !S.tools[T.tool], q = qOf(x => x.type === 'gtest' && x.test === t);
+        h += `<button class="btn" data-act="gtest" data-t="${t}" ${no || q ? 'disabled' : ''}>${T.name}<small>${no ? 'cihaz yok' : q ? 'sırada' : T.min + ' dk'}</small></button>`;
+      });
+      h += `</div>`;
+      ['overview', ...Object.keys(GLOBAL_TESTS)].forEach(k => { if (c.findings[k]) h += UI.resHtml(c, k, k === 'overview' ? 'Ustanın görüşü' : GLOBAL_TESTS[k].name); });
+      if (c.owner === 'customer') h += `<button class="btn good" data-act="deliver">Aracı teslim et</button>`;
+    } else {
+      const comps = Object.entries(COMPS).filter(([, C]) => C.view === I.view);
+      h += `<div class="chips" id="iChips">${comps.map(([k, C]) => { const st = UI.compState(c, k); return `<button class="cchip ${st.cls} ${I.comp === k ? 'sel' : ''}" data-act="comp" data-c="${k}"><i></i>${C.name}</button>`; }).join('')}</div>`;
+      if (!I.comp) h += `<p class="muted hint">Araçtaki noktaya ya da yukarıdaki parçaya dokun.${(c.hints || []).length ? ' Mor: ustanın şüphelendiği yer.' : ''}</p>`;
+      else {
+        const C = COMPS[I.comp], noTool = C.tool && !S.tools[C.tool];
+        const qL = qOf(t => t.type === 'look' && t.comp === I.comp), qM = qOf(t => t.type === 'meas' && t.comp === I.comp);
+        h += `<div class="row sp"><b class="ctitle">${C.name}</b>${(c.hints || []).includes(I.comp) ? '<span class="chip" style="color:#b98cff;border-color:#b98cff">şüpheli</span>' : ''}</div><div class="gridb">`;
+        h += `<button class="btn pri" data-act="look" data-c="${I.comp}" ${qL ? 'disabled' : ''}>Gözle kontrol<small>${qL ? 'sırada' : LOOK_MIN + ' dk'}</small></button>`;
+        h += C.tool ? `<button class="btn" data-act="meas" data-c="${I.comp}" ${noTool || qM ? 'disabled' : ''}>Ölç<small>${noTool ? TOOLS[C.tool].name + ' yok' : qM ? 'sırada' : MEAS_MIN + ' dk'}</small></button>` : '<span></span>';
+        h += `</div>`;
+        ['look', 'meas'].forEach(k => { if (c.findings[k + ':' + I.comp]) h += UI.resHtml(c, k + ':' + I.comp, k === 'look' ? 'Gözle' : 'Ölçüm'); });
+        const parts = Object.entries(FAULTS).filter(([, F]) => F.comp === I.comp && F.lvl <= lvl() + 1);
+        parts.forEach(([f, F]) => {
+          const done = c.fixed.includes(f) || c.wasted.includes(f), q = qOf(t => t.part === f), n = S.stock[f] || 0;
+          const pend = S.errands.some(e => e.part === f && !e.status) || S.orders.some(o => o.part === f);
+          h += `<div class="prow"><span>${F.part}<small>${done ? 'yenilendi' : q ? 'sırada' : n ? 'depo ' + n + ' · ' + laborTime(f) + ' dk' : pend ? 'yolda' : 'depoda yok'}</small></span>${done || q ? '' : n ? `<button class="btn sm" data-act="part" data-f="${f}" ${c.bay == null ? 'disabled' : ''}>Değiştir</button>` : `<button class="btn sm" data-act="buyPart" data-f="${f}">Temin et</button>`}</div>`;
+        });
+      }
+    }
+    if (queued.length) {
+      const cur = queued.find(x => x.w.queue[0] === x.t);
+      h += `<div class="qline"><span>Sıra: ${queued.length} iş${cur ? ' · şimdi: ' + taskLabel(cur.t) : ''}</span>${queued.filter(x => x !== cur).slice(0, 1).map(({ w, t }) => `<button class="btn sm ghost" data-act="cancelT" data-w="${w.id}" data-t="${t.id}">Sonrakini iptal</button>`).join('')}</div>`;
+    }
+    const chipsScroll = $('#iChips') ? $('#iChips').scrollLeft : 0, sc = sheet.scrollTop;
+    sheet.innerHTML = h;
+    if ($('#iChips')) { $('#iChips').scrollLeft = chipsScroll; const sel = $('#iChips .sel'); if (sel && UI._lastChip !== I.comp) { sel.scrollIntoView({ inline: 'center', block: 'nearest' }); UI._lastChip = I.comp; } }
+    sheet.scrollTop = sc;
+  },
   resHtml(c, key, label) {
     const f = c.findings[key];
     return `<div class="res ${f.ab ? 'ab' : ''}"><span class="lbl">${label}${f.stale ? ' · onarım öncesi' : ''}</span>${f.res.map(esc).join('<br>')}</div>`;
@@ -2729,7 +2985,7 @@ const UI = {
     if (tab === 'door') {
       h += S.jobs.length ? `<div class="list">${S.jobs.map(c => {
         const left = c.cust.deadline - S.day;
-        return `<div class="card"><div class="row sp"><span class="title">${MODELS[c.model].name}</span><span class="row">${c.appt ? '<span class="chip ok">Randevulu</span>' : ''}<span class="chip ${left <= 0 ? 'bad' : ''}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün'}</span></span></div>
+        return `<div class="card"><div class="row sp"><span class="title">${MODELS[c.model].name}</span><span class="row">${c.warranty ? '<span class="chip bad">Garanti</span>' : ''}${c.tow ? '<span class="chip warn">Çekiciyle</span>' : ''}${c.appt ? '<span class="chip ok">Randevulu</span>' : ''}<span class="chip ${left <= 0 ? 'bad' : ''}">${left <= 0 ? 'Bugün teslim' : left === 1 ? 'Yarına kadar' : left + ' gün'}</span></span></div>
           <span class="meta">${esc(c.cust.name)} · ${c.year} · ${c.km.toLocaleString('tr-TR')} km · ${c.leaveAt ? Math.max(0, Math.round(c.leaveAt - S.minute)) + ' dk sabır' : ''}</span>
           <ul class="complaint">${c.sym.map(s => `<li>${SYM[s]}</li>`).join('')}</ul>
           <div class="btns"><button class="btn sm" data-act="reject" data-id="${c.id}">Reddet</button><button class="btn sm pri" data-act="accept" data-id="${c.id}" ${freeBay() < 0 ? 'disabled' : ''}>${freeBay() < 0 ? 'Lift dolu' : 'Kabul et'}</button></div></div>`;
@@ -2917,6 +3173,7 @@ const UI = {
     UI.updateTags(); UI.updateHots();
     const box = $('#iWork');
     if (UI.inspect) {
+      const ck = $('#iClock'); if (ck) ck.textContent = clock(S.minute);
       const q = tasksFor(UI.inspect.id), cur = q.find(x => x.w.queue[0] === x.t);
       box.hidden = !cur;
       if (cur) {
@@ -2937,7 +3194,7 @@ const UI = {
       let el = UI.tagEls[c.id];
       if (!el) { el = document.createElement('div'); el.className = 'tag'; el.addEventListener('click', () => UI.openCar(c.id)); wrap.appendChild(el); UI.tagEls[c.id] = el; }
       let txt, cls = 'tag';
-      if (c.apron != null) { txt = `Yeni müşteri · ${c.cust.name}`; cls += ' offer'; }
+      if (c.apron != null) { txt = `${c.warranty ? 'Garanti' : c.tow ? 'Çekici' : 'Yeni müşteri'} · ${c.cust.name}`; cls += c.warranty ? ' urgent' : ' offer'; }
       else if (c.owner === 'customer') { const left = c.cust.deadline - S.day; txt = `${c.cust.name} · ${left <= 0 ? 'bugün' : left + 'g'}`; cls += left <= 0 ? ' urgent' : ' cust'; }
       else if (c.listed) { txt = fmt(c.listed); cls += ' sale'; }
       else txt = MODELS[c.model].name;
@@ -2968,7 +3225,7 @@ const UI = {
       el.style.left = ((p.x * 0.5 + 0.5) * W) + 'px'; el.style.top = ((-p.y * 0.5 + 0.5) * H) + 'px';
       const st = UI.compState(c, k), cls = 'hot ' + st.cls + (I.comp === k ? ' sel' : '');
       if (el.className !== cls) el.className = cls;
-      el.querySelector('span').style.display = (I.comp && I.comp !== k && W < 760) ? 'none' : '';
+      el.querySelector('span').style.display = UI.isCompact() && I.comp !== k ? 'none' : '';
     });
   },
   hoverAt(x, y) {
@@ -2985,7 +3242,8 @@ const UI = {
   toast(msg, kind = 'info') {
     const t = document.createElement('div'); t.className = 't ' + kind; t.textContent = msg; $('#toast').appendChild(t);
     setTimeout(() => t.remove(), 3600);
-    while ($('#toast').children.length > 3) $('#toast').firstChild.remove();
+    const max = UI.inspect && UI.isCompact() ? 1 : 3;
+    while ($('#toast').children.length > max) $('#toast').firstChild.remove();
   },
   modal(title, html, btns) {
     UI.mBtns = btns || [{ t: 'Tamam', cls: 'pri' }];
@@ -3021,5 +3279,4 @@ UI.init();
   if (hot && hot.ready) hot.ready(start); else start(hot && hot.data);
 })();
 </script>
-
 </body></html>
